@@ -5,16 +5,17 @@ Turn an Android phone into a Debian graphical workstation and Home launcher.
 [Download hedgeyos v0.1.0-alpha.1 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-arm64-v8a-alpha.1-test-signed.apk)
 
 Current status: `v0.1.0-alpha.1` is published as a GitHub prerelease and has
-device smoke-test evidence on an attached ARM64 phone. The alpha boots the
+device smoke-test evidence on an attached ARM64 phone. The alpha boots into the
 bundled Debian 13/XFCE desktop as the Android Home screen, starts embedded
-Termux:X11 from inside the hedgeyos APK, recovers after Android force-stops and
-relaunches the app, and applies the hedgeyos wallpaper/icon branding on the
+Termux:X11 from inside the hedgeyos APK, opens Debian desktop apps, exposes the
+hedgeyos recovery menu, and applies the hedgeyos wallpaper/icon branding on the
 Android and Linux sides.
 
 This is still an alpha. Final `v0.1.0` has not been tagged: before that, the
 remaining release gate is a broader acceptance pass with production signing,
-direct Reset Debian evidence, and a deliberately clean target profile. See
-[`docs/TEST-REPORT.md`](docs/TEST-REPORT.md) for the current evidence.
+direct Reset Debian evidence, APT install checks, and final Linux-side rename
+verification. See [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md) for the current
+evidence.
 
 ## What hedgeyos Is
 
@@ -53,11 +54,31 @@ production-signed artifact.
 5. During first boot, hedgeyos verifies and extracts the bundled Debian rootfs,
    starts embedded X11, then starts XFCE.
 
-hedgeyos does not require the phone's installed Termux app, a separate
-Termux:X11 APK, a VNC app, or a companion APK for this path. The current alpha
-kept an installed `com.termux` package intact during testing; independence was
-verified from APK contents, code paths, package list, and the running process
-tree.
+hedgeyos is a single-APK desktop path. It bundles Debian, PRoot, and embedded
+X11; users do not need a separate Termux app, Termux:X11 APK, VNC app, or
+companion APK for the XFCE desktop.
+
+## Screenshots And Demo
+
+The media below was captured from an attached ARM64 Android phone running
+`v0.1.0-alpha.1`.
+
+![hedgeyos first launch reaching the XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-first-load.gif)
+
+![hedgeyos XFCE desktop on a phone](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-initial-load-final.png)
+
+![hedgeyos desktop demo with menu, Debian terminal, display controls, and landscape file manager](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-desktop-demo.gif)
+
+![hedgeyos landscape file manager on Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-landscape-desktop.png)
+
+This is full Debian 13 Trixie on the phone: XFCE, Thunar, xfce4-terminal, the
+Debian filesystem, and ordinary Debian APT sources run inside the bundled PRoot
+rootfs.
+
+Alpha note: the current captured terminal still shows a legacy
+`panix@localhost` shell prompt from the pre-rename rootfs. Treat that as a
+pre-`v0.1.0` cleanup item; the project, repository, Android package, and release
+identity are hedgeyos.
 
 ## Recovery
 
@@ -81,7 +102,8 @@ These controls are present so a broken launcher build does not trap the user.
 The bundled rootfs is Debian 13 Trixie with ordinary Debian APT sources for
 Trixie, Trixie updates, and Debian security. Normal commands such as `apt
 update`, `apt install git`, `python3`, and `gcc` are intended to work inside the
-Debian environment. Final `v0.1.0` should rerun and record a full APT acceptance
+Debian environment. The current alpha can run the Debian acceptance check from
+the hedgeyos menu; final `v0.1.0` should rerun and record a full APT acceptance
 pass against the exact release artifact.
 
 The rootfs runs under unprivileged PRoot, not root, a VM, or a container with its
