@@ -25,9 +25,21 @@ code changes so releases can be audited against the exact sources used.
 
 ## Debian Rootfs Pin
 
-No release rootfs has been built or pinned yet. The first hedgeyos release must
-record the exact Debian 13 Trixie ARM64 rootfs build source, package manifest,
-SHA-256, build date, and architecture here before an APK is tagged.
+The published `v0.1.0-alpha.1` prerelease bundles this Debian rootfs:
+
+- Name: `debian-trixie-arm64-rootfs.tar.zst`
+- Debian release: 13 Trixie
+- Architecture: `arm64`
+- Build date: `2026-07-26T00:12:00Z`
+- Primary source: `deb http://deb.debian.org/debian trixie main`
+- Updates source: `deb http://deb.debian.org/debian trixie-updates main`
+- Security source: `deb http://security.debian.org/debian-security trixie-security main`
+- SHA-256:
+  `5841fb1ad7706dbab40492d484ec817cb501203d9ea6e867ad1ebd29949b95c7`
+- Size: 221,480,599 bytes
+
+The full package manifest and Android-extractable archive notes are recorded in
+`rootfs/manifests/debian-trixie-arm64-rootfs.provenance`.
 
 ## Termux PRoot Payload Pin
 
@@ -36,6 +48,6 @@ Termux main repository and verifies these package hashes before unpacking:
 
 | Package | Version | Termux repository path | SHA-256 |
 | --- | --- | --- | --- |
-| `proot` | `5.1.107.86` | `pool/main/p/proot/proot_5.1.107.86_aarch64.deb` | `d436cef349b14df0cde18dffe105e64cade3638b3193d870e8f748fde489ded1` |
+| `proot` | `5.1.107.87` | `pool/main/p/proot/proot_5.1.107.87_aarch64.deb` | `c978bbe7161a639349a2e369d3d134e35d234f5b846432182a5c9bffadb606a6` |
 | `libandroid-shmem` | `0.7` | `pool/main/liba/libandroid-shmem/libandroid-shmem_0.7_aarch64.deb` | `0da3a24d558b93c92bcf8d611e0826a99ff96e396b148e6cdf33b47c47c57ff6` |
 | `libtalloc` | `2.4.3` | `pool/main/libt/libtalloc/libtalloc_2.4.3_aarch64.deb` | `ac81ad623d74c209718b9f3acb2dd702cc8a88c431e820d212229910b4db29da` |

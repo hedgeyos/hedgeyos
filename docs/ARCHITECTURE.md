@@ -47,11 +47,11 @@ Debian GUI application
 
 Device evidence:
 
-- On 2026-07-28, the local `0.1.0-alpha.3` test build booted the bundled
-  Debian/XFCE desktop as Android Home on a CPH2499 ARM64 phone. The runtime
-  reached `RUNNING` with `org.hedgeyos`, `hedgeyos-x11`, bundled
-  `proot`, and `xfce4-session` processes, and Debian `apt update`/`hello`
-  checks passed inside the bundled rootfs. See `docs/TEST-REPORT.md`.
+- On 2026-07-28, the published `v0.1.0-alpha.1` test APK booted the bundled
+  Debian/XFCE desktop as Android Home on a CPH2499 ARM64 phone. After
+  force-stop/relaunch, the runtime returned to `RUNNING` with `org.hedgeyos`,
+  `hedgeyos-x11`, `xfce4-session`, `xfwm4`, `xfdesktop`, and `xfce4-panel`
+  processes. See `docs/TEST-REPORT.md`.
 
 Major remaining implementation boundaries:
 

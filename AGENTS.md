@@ -34,16 +34,16 @@ Surface.
 
 - Repository: `https://github.com/hedgeyos/hedgeyos`
 - Branch: `master`
-- Current head at handoff: `8339b9468aee2c72ea4163dd81442e07a8ed38b4`
-- Current Android version: `versionCode 2`, `versionName 0.1.0-alpha.2`
-- Latest green CI:
-  - Build hedgeyos: `30152849103`
-  - Unit tests: `30152849112`
-  - Gradle wrapper validation: `30152849114`
-- Latest CI inspection artifact: `hedgeyos-apk-inspection` artifact `8618274550`
-- Latest unsigned CI APK artifact: `hedgeyos-arm64-v8a-ci` artifact `8618275650`
+- Current Android version: `versionCode 1`, `versionName 0.1.0-alpha.1`
+- Published prerelease:
+  `https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.1`
+- Published APK:
+  `hedgeyos-arm64-v8a-alpha.1-test-signed.apk`
+- Published APK SHA-256:
+  `464bb857c8bcf410953535caddde2d82d985f5281c17d65031eca1881adfc91a`
+- Release code commit before documentation cleanup: `2f271ab4`
 
-The latest CI inspection records:
+The latest local APK inspection records:
 
 - Package id `org.hedgeyos`
 - Label `hedgeyos`
@@ -55,11 +55,14 @@ The latest CI inspection records:
 - Bundled Debian rootfs asset and checksum
 - Bundled PRoot payload and checksum
 - Embedded `libXlorie.so`
-- No obvious VNC/RDP files in APK listing
+- No VNC/RDP files in APK listing
 
-The published GitHub prerelease `hedgeyos-v0.1.0-alpha.1` is older. It is signed
-and downloadable, but it is not the final release and has not passed the full
-device acceptance suite.
+The published GitHub prerelease is signed with the repository test key and is
+downloadable. It is not the final release. Device smoke testing proved the
+embedded X11/XFCE desktop, force-stop/relaunch recovery, `xfwm4`, `xfdesktop`,
+`xfce4-panel`, and wallpaper application on the attached ARM64 phone. Final
+`v0.1.0` still needs production signing and the broader acceptance pass recorded
+in `docs/TEST-REPORT.md`.
 
 ## Important History
 
@@ -76,8 +79,8 @@ the architecture:
   rebuildable.
 - `aapt dump badging` lists disabled launcher candidates. The CI inspection
   script now validates the relevant manifest activity blocks directly.
-- Alpha.1 used `versionCode 1`; alpha.2 now uses `versionCode 2` so it can
-  update alpha.1.
+- `v0.1.0-alpha.1` currently uses `versionCode 1`. Future prereleases must bump
+  `versionCode` before they can update this APK in place.
 - Command-line `pm install` from Termux on the phone hit Android app-UID/FUSE
   restrictions. That is not evidence that normal Android UI install fails.
 
@@ -168,7 +171,7 @@ Also capture screenshots under `docs/images/` for:
 After acceptance passes:
 
 1. Update `README.md`, `docs/TEST-REPORT.md`, `docs/KNOWN-ISSUES.md`, and any
-   affected architecture/build docs with the real tested status.
+   affected architecture/build docs with the exact final tested status.
 2. Ensure `README.md` links the stable latest-release URL:
    `https://github.com/hedgeyos/hedgeyos/releases/latest/download/hedgeyos-arm64-v8a.apk`
 3. Tag `v0.1.0`.
