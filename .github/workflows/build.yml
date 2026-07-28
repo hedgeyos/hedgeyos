@@ -73,14 +73,14 @@ jobs:
             rootfs/manifests/debian-trixie-arm64-rootfs.provenance
 
       - name: Upload APK inspection artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hedgeyos-apk-inspection
           path: build/hedgeyos-inspection/**
           if-no-files-found: error
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hedgeyos-arm64-v8a-ci
           path: |
