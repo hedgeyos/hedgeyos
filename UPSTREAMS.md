@@ -2,12 +2,12 @@
 
 Retrieved: 2026-07-25T09:17:35+07:00
 
-Panix is an independent derivative. These upstreams are recorded before Panix
+hedgeyos is an independent derivative. These upstreams are recorded before hedgeyos
 code changes so releases can be audited against the exact sources used.
 
 ## Git Sources
 
-| Upstream | URL | Default branch | Commit SHA | Use in Panix |
+| Upstream | URL | Default branch | Commit SHA | Use in hedgeyos |
 | --- | --- | --- | --- | --- |
 | Termux application | https://github.com/termux/termux-app | master | `3df69d1da197dd9bd71a3bafd902dffd720576b4` | Base Android application and terminal/runtime code. |
 | Termux:X11 | https://github.com/termux/termux-x11 | master | `a7a81d352fef6b3cb983c4998d1d50c3d3fe800f` | Embedded X server source. |
@@ -17,7 +17,7 @@ code changes so releases can be audited against the exact sources used.
 
 ## Web Sources
 
-| Source | URL | Retrieval evidence | Use in Panix |
+| Source | URL | Retrieval evidence | Use in hedgeyos |
 | --- | --- | --- | --- |
 | Termux website and documentation | https://termux.dev/en/ | HTTP 200, `Last-Modified: Tue, 14 Jul 2026 20:53:50 GMT` | Product attribution and user-facing Termux behavior baseline. |
 | Android custom Home documentation | https://developer.android.com/work/dpc/dedicated-devices/cookbook#custom-home | HTTP 200, `Last-Modified: Thu, 05 Mar 2026 10:39:12 GMT` | Home activity manifest and launcher-role behavior. |
@@ -25,7 +25,7 @@ code changes so releases can be audited against the exact sources used.
 
 ## Debian Rootfs Pin
 
-No release rootfs has been built or pinned yet. The first Panix release must
+No release rootfs has been built or pinned yet. The first hedgeyos release must
 record the exact Debian 13 Trixie ARM64 rootfs build source, package manifest,
 SHA-256, build date, and architecture here before an APK is tagged.
 

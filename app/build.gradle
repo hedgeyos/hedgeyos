@@ -21,8 +21,8 @@ android {
     def apkVersionTag = System.getenv("TERMUX_APK_VERSION_TAG") ?: ""
     def splitAPKsForDebugBuilds = System.getenv("TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS") ?: "1"
     def splitAPKsForReleaseBuilds = System.getenv("TERMUX_SPLIT_APKS_FOR_RELEASE_BUILDS") ?: "1"
-    def useExternalNativeBuild = (System.getenv("PANIX_USE_EXTERNAL_NATIVE_BUILD") ?: "0") == "1"
-    def includeX11Module = (System.getenv("PANIX_INCLUDE_X11_MODULE") ?: "0") == "1"
+    def useExternalNativeBuild = (System.getenv("HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD") ?: "0") == "1"
+    def includeX11Module = (System.getenv("HEDGEYOS_INCLUDE_X11_MODULE") ?: "0") == "1"
 
     dependencies {
         implementation "androidx.annotation:annotation:1.9.0"
@@ -46,28 +46,28 @@ android {
     }
 
     defaultConfig {
-        applicationId "io.github.decentricity.panix"
+        applicationId "org.hedgeyos"
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode 3
-        versionName "0.1.0-alpha.3"
+        versionCode 1
+        versionName "0.1.0-alpha.1"
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)
 
         buildConfigField "String", "TERMUX_PACKAGE_VARIANT", "\"" + project.ext.packageVariant + "\"" // Used by TermuxApplication class
-        buildConfigField "boolean", "PANIX_INCLUDE_X11_MODULE", includeX11Module ? "true" : "false"
+        buildConfigField "boolean", "HEDGEYOS_INCLUDE_X11_MODULE", includeX11Module ? "true" : "false"
 
-        manifestPlaceholders.TERMUX_PACKAGE_NAME = "io.github.decentricity.panix"
-        manifestPlaceholders.TERMUX_APP_NAME = "Panix"
-        manifestPlaceholders.TERMUX_API_APP_NAME = "Panix:API"
-        manifestPlaceholders.TERMUX_BOOT_APP_NAME = "Panix:Boot"
-        manifestPlaceholders.TERMUX_FLOAT_APP_NAME = "Panix:Float"
-        manifestPlaceholders.TERMUX_STYLING_APP_NAME = "Panix:Styling"
-        manifestPlaceholders.TERMUX_TASKER_APP_NAME = "Panix:Tasker"
-        manifestPlaceholders.TERMUX_WIDGET_APP_NAME = "Panix:Widget"
-        manifestPlaceholders.PANIX_FALLBACK_HOME_ENABLED = includeX11Module ? "false" : "true"
-        manifestPlaceholders.PANIX_X11_HOME_ENABLED = includeX11Module ? "true" : "false"
+        manifestPlaceholders.TERMUX_PACKAGE_NAME = "org.hedgeyos"
+        manifestPlaceholders.TERMUX_APP_NAME = "hedgeyos"
+        manifestPlaceholders.TERMUX_API_APP_NAME = "hedgeyos:API"
+        manifestPlaceholders.TERMUX_BOOT_APP_NAME = "hedgeyos:Boot"
+        manifestPlaceholders.TERMUX_FLOAT_APP_NAME = "hedgeyos:Float"
+        manifestPlaceholders.TERMUX_STYLING_APP_NAME = "hedgeyos:Styling"
+        manifestPlaceholders.TERMUX_TASKER_APP_NAME = "hedgeyos:Tasker"
+        manifestPlaceholders.TERMUX_WIDGET_APP_NAME = "hedgeyos:Widget"
+        manifestPlaceholders.HEDGEYOS_FALLBACK_HOME_ENABLED = includeX11Module ? "false" : "true"
+        manifestPlaceholders.HEDGEYOS_X11_HOME_ENABLED = includeX11Module ? "true" : "false"
 
         if (useExternalNativeBuild) {
             externalNativeBuild {
@@ -153,10 +153,10 @@ android {
         variant.outputs.all { output ->
             if (variant.buildType.name == "debug") {
                 def abi = output.getFilter(com.android.build.OutputFile.ABI)
-                outputFileName = new File("Panix-" + (apkVersionTag ? apkVersionTag : "debug") + "-" + (abi ? abi : "universal") + ".apk")
+                outputFileName = new File("hedgeyos-" + (apkVersionTag ? apkVersionTag : "debug") + "-" + (abi ? abi : "universal") + ".apk")
             } else if (variant.buildType.name == "release") {
                 def abi = output.getFilter(com.android.build.OutputFile.ABI)
-                outputFileName = new File(abi == "arm64-v8a" ? "Panix-arm64-v8a.apk" : "Panix-" + (abi ? abi : "universal") + ".apk")
+                outputFileName = new File(abi == "arm64-v8a" ? "hedgeyos-arm64-v8a.apk" : "hedgeyos-" + (abi ? abi : "universal") + ".apk")
             }
         }
     }

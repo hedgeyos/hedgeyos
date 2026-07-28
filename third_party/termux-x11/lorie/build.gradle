@@ -23,12 +23,12 @@ def hostApplicationId = hostProject.android.defaultConfig.applicationId ?: hostP
 // ndkVersion isn't inherited from the host module; use its value when set,
 // otherwise fall back to a known 16 KB-page-aligning NDK.
 def hostNdkVersion = hostProject.android.ndkVersion ?: "29.0.14206865"
-def panixCompileSdkVersion = rootProject.hasProperty("compileSdkVersion") ? rootProject.properties.compileSdkVersion.toInteger() : 34
+def hedgeyosCompileSdkVersion = rootProject.hasProperty("compileSdkVersion") ? rootProject.properties.compileSdkVersion.toInteger() : 34
 
 android {
     namespace 'com.termux.x11'
     //noinspection GrDeprecatedAPIUsage
-    compileSdkVersion panixCompileSdkVersion
+    compileSdkVersion hedgeyosCompileSdkVersion
     ndkVersion hostNdkVersion
     defaultConfig {
         minSdkVersion 26

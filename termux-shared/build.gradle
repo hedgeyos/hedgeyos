@@ -6,7 +6,7 @@ android {
 
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
-    def useExternalNativeBuild = (System.getenv("PANIX_USE_EXTERNAL_NATIVE_BUILD") ?: "0") == "1"
+    def useExternalNativeBuild = (System.getenv("HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD") ?: "0") == "1"
 
     dependencies {
         implementation "androidx.appcompat:appcompat:1.6.1"

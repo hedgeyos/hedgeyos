@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,28 +15,29 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.termux.app.PanixRuntimeManager;
-import com.termux.app.PanixRuntimeService;
+import com.termux.app.HedgeyosRuntimeManager;
+import com.termux.app.HedgeyosRuntimeService;
 
 import java.util.Collections;
 import java.util.List;
 
-public final class PanixHomeActivity extends MainActivity {
+public final class HedgeyosHomeActivity extends MainActivity {
 
-    private static final int PANIX_DISPLAY_DEFAULTS_VERSION = 2;
+    private static final int HEDGEYOS_DISPLAY_DEFAULTS_VERSION = 2;
 
-    private final Handler panixStatusHandler = new Handler(Looper.getMainLooper());
-    private final Runnable panixStatusPoller = new Runnable() {
+    private final Handler hedgeyosStatusHandler = new Handler(Looper.getMainLooper());
+    private final Runnable hedgeyosStatusPoller = new Runnable() {
         @Override
         public void run() {
             updateStartupStatus();
-            panixStatusHandler.postDelayed(this, 1000);
+            hedgeyosStatusHandler.postDelayed(this, 1000);
         }
     };
 
@@ -46,28 +46,28 @@ public final class PanixHomeActivity extends MainActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        applyPanixDisplayDefaults();
+        applyHedgeyosDisplayDefaults();
         startupStatus = findViewById(R.id.textView);
         rebrandStartupScreen();
-        addPanixMenuButton();
-        PanixRuntimeService.requestStart(this);
+        addHedgeyosMenuButton();
+        HedgeyosRuntimeService.requestStart(this);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        panixStatusHandler.post(panixStatusPoller);
+        hedgeyosStatusHandler.post(hedgeyosStatusPoller);
     }
 
     @Override
     public void onPause() {
-        panixStatusHandler.removeCallbacks(panixStatusPoller);
+        hedgeyosStatusHandler.removeCallbacks(hedgeyosStatusPoller);
         super.onPause();
     }
 
     @Override
     public void onUserLeaveHint() {
-        // Panix is the HOME activity; pressing Home should return here, not
+        // hedgeyos is the HOME activity; pressing Home should return here, not
         // move the desktop into Termux:X11 picture-in-picture mode.
     }
 
@@ -82,28 +82,28 @@ public final class PanixHomeActivity extends MainActivity {
         View help = findViewById(R.id.help_button);
         if (help instanceof Button) {
             Button button = (Button) help;
-            button.setText("Panix Menu");
-            button.setOnClickListener(v -> showPanixMenu());
+            button.setText("hedgeyos menu");
+            button.setOnClickListener(v -> showHedgeyosMenu());
         }
 
         View exit = findViewById(R.id.exit_button);
         if (exit instanceof Button) {
             Button button = (Button) exit;
             button.setText("Stop Desktop");
-            button.setOnClickListener(v -> PanixRuntimeService.requestStopDesktop(this));
+            button.setOnClickListener(v -> HedgeyosRuntimeService.requestStopDesktop(this));
         }
 
         updateStartupStatus();
     }
 
-    private void applyPanixDisplayDefaults() {
+    private void applyHedgeyosDisplayDefaults() {
         if (prefs == null) {
             return;
         }
         int appliedVersion = prefs.get().getInt(
-            "panixDisplayDefaultsVersion",
-            prefs.get().getBoolean("panixDisplayDefaultsApplied", false) ? 1 : 0);
-        if (appliedVersion >= PANIX_DISPLAY_DEFAULTS_VERSION) {
+            "hedgeyosDisplayDefaultsVersion",
+            prefs.get().getBoolean("hedgeyosDisplayDefaultsApplied", false) ? 1 : 0);
+        if (appliedVersion >= HEDGEYOS_DISPLAY_DEFAULTS_VERSION) {
             return;
         }
 
@@ -115,37 +115,35 @@ public final class PanixHomeActivity extends MainActivity {
             .putBoolean("fullscreen", true)
             .putBoolean("showAdditionalKbd", true)
             .putBoolean("additionalKbdVisible", true)
-            .putBoolean("panixDisplayDefaultsApplied", true)
-            .putInt("panixDisplayDefaultsVersion", PANIX_DISPLAY_DEFAULTS_VERSION)
+            .putBoolean("hedgeyosDisplayDefaultsApplied", true)
+            .putInt("hedgeyosDisplayDefaultsVersion", HEDGEYOS_DISPLAY_DEFAULTS_VERSION)
             .commit();
-        onPreferencesChanged("panixDisplayDefaultsApplied");
+        onPreferencesChanged("hedgeyosDisplayDefaultsApplied");
     }
 
-    private void addPanixMenuButton() {
+    private void addHedgeyosMenuButton() {
         FrameLayout content = findViewById(android.R.id.content);
-        Button button = new Button(this);
-        button.setText("P");
-        button.setTextColor(Color.WHITE);
-        button.setTypeface(Typeface.DEFAULT_BOLD);
-        button.setTextSize(16);
-        button.setAllCaps(false);
-        button.setGravity(Gravity.CENTER);
+        ImageButton button = new ImageButton(this);
+        button.setImageResource(com.termux.R.drawable.hedgeyos_icon);
+        button.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        button.setPadding(dp(2), dp(2), dp(2), dp(2));
+        button.setContentDescription("hedgeyos menu");
         button.setBackground(menuButtonBackground());
-        button.setOnClickListener(v -> showPanixMenu());
+        button.setOnClickListener(v -> showHedgeyosMenu());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            button.setTooltipText("Panix menu");
+            button.setTooltipText("hedgeyos menu");
         }
 
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(dp(44), dp(44), Gravity.TOP | Gravity.END);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP | Gravity.END);
         params.setMargins(0, dp(12), dp(12), 0);
         content.addView(button, params);
     }
 
-    private void showPanixMenu() {
+    private void showHedgeyosMenu() {
         String[] items = new String[] {
             "Open Debian Terminal",
             "Run Debian APT Check",
-            "Open Panix Logs",
+            "Open hedgeyos logs",
             "Restart Desktop",
             "Stop Desktop",
             "Reset Debian",
@@ -157,23 +155,23 @@ public final class PanixHomeActivity extends MainActivity {
         };
 
         new AlertDialog.Builder(this)
-            .setTitle("Panix")
+            .setTitle("hedgeyos")
             .setItems(items, (dialog, which) -> {
                 switch (which) {
                     case 0:
-                        openPanixTerminal();
+                        openHedgeyosTerminal();
                         break;
                     case 1:
-                        PanixRuntimeManager.runDebianAcceptanceChecksAsync(this);
+                        HedgeyosRuntimeManager.runDebianAcceptanceChecksAsync(this);
                         break;
                     case 2:
-                        showPanixLogs();
+                        showHedgeyosLogs();
                         break;
                     case 3:
-                        PanixRuntimeService.requestRestartDesktop(this);
+                        HedgeyosRuntimeService.requestRestartDesktop(this);
                         break;
                     case 4:
-                        PanixRuntimeService.requestStopDesktop(this);
+                        HedgeyosRuntimeService.requestStopDesktop(this);
                         break;
                     case 5:
                         confirmResetDebian();
@@ -200,8 +198,8 @@ public final class PanixHomeActivity extends MainActivity {
             .show();
     }
 
-    private void openPanixTerminal() {
-        PanixRuntimeManager.openDebianTerminalAsync(this);
+    private void openHedgeyosTerminal() {
+        HedgeyosRuntimeManager.openDebianTerminalAsync(this);
     }
 
     private void openDisplaySettings() {
@@ -213,15 +211,15 @@ public final class PanixHomeActivity extends MainActivity {
     private void confirmResetDebian() {
         new AlertDialog.Builder(this)
             .setTitle("Reset Debian")
-            .setMessage("Delete the installed Debian rootfs and keep the Panix export directory?")
+            .setMessage("Delete the installed Debian rootfs and keep the hedgeyos export directory?")
             .setNegativeButton("Cancel", null)
-            .setPositiveButton("Reset", (dialog, which) -> PanixRuntimeService.requestResetDebian(this))
+            .setPositiveButton("Reset", (dialog, which) -> HedgeyosRuntimeService.requestResetDebian(this))
             .show();
     }
 
-    private void showPanixLogs() {
+    private void showHedgeyosLogs() {
         TextView logText = new TextView(this);
-        logText.setText(PanixRuntimeManager.readRecentLogs(this));
+        logText.setText(HedgeyosRuntimeManager.readRecentLogs(this));
         logText.setTextIsSelectable(true);
         logText.setTextSize(12);
         int padding = dp(16);
@@ -231,7 +229,7 @@ public final class PanixHomeActivity extends MainActivity {
         scrollView.addView(logText);
 
         new AlertDialog.Builder(this)
-            .setTitle("Panix Logs")
+            .setTitle("hedgeyos logs")
             .setView(scrollView)
             .setPositiveButton("Close", null)
             .show();
@@ -282,16 +280,16 @@ public final class PanixHomeActivity extends MainActivity {
         if (startupStatus == null) {
             return;
         }
-        PanixRuntimeManager.RuntimeStatus runtimeStatus = PanixRuntimeManager.getStatus(this);
+        HedgeyosRuntimeManager.RuntimeStatus runtimeStatus = HedgeyosRuntimeManager.getStatus(this);
         String worker = runtimeStatus.workerRunning ? " working" : "";
-        startupStatus.setText("Panix: " + runtimeStatus.state + worker + "\n" + runtimeStatus.detail);
+        startupStatus.setText("hedgeyos: " + runtimeStatus.state + worker + "\n" + runtimeStatus.detail);
     }
 
     private GradientDrawable menuButtonBackground() {
         GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(Color.rgb(12, 18, 24));
+        drawable.setColor(Color.argb(238, 55, 42, 32));
         drawable.setCornerRadius(dp(22));
-        drawable.setStroke(dp(1), Color.rgb(74, 222, 128));
+        drawable.setStroke(dp(1), Color.rgb(238, 184, 91));
         return drawable;
     }
 

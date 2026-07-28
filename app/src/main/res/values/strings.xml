@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!DOCTYPE resources [
-    <!ENTITY TERMUX_PACKAGE_NAME "io.github.decentricity.panix">
-    <!ENTITY TERMUX_APP_NAME "Panix">
-    <!ENTITY TERMUX_API_APP_NAME "Panix:API">
-    <!ENTITY TERMUX_BOOT_APP_NAME "Panix:Boot">
-    <!ENTITY TERMUX_FLOAT_APP_NAME "Panix:Float">
-    <!ENTITY TERMUX_STYLING_APP_NAME "Panix:Styling">
-    <!ENTITY TERMUX_TASKER_APP_NAME "Panix:Tasker">
-    <!ENTITY TERMUX_WIDGET_APP_NAME "Panix:Widget">
+    <!ENTITY TERMUX_PACKAGE_NAME "org.hedgeyos">
+    <!ENTITY TERMUX_APP_NAME "hedgeyos">
+    <!ENTITY TERMUX_API_APP_NAME "hedgeyos:API">
+    <!ENTITY TERMUX_BOOT_APP_NAME "hedgeyos:Boot">
+    <!ENTITY TERMUX_FLOAT_APP_NAME "hedgeyos:Float">
+    <!ENTITY TERMUX_STYLING_APP_NAME "hedgeyos:Styling">
+    <!ENTITY TERMUX_TASKER_APP_NAME "hedgeyos:Tasker">
+    <!ENTITY TERMUX_WIDGET_APP_NAME "hedgeyos:Widget">
     ]>
 
 <resources>
 
     <string name="application_name">&TERMUX_APP_NAME;</string>
-    <string name="lorie_app_name">Panix X11 Surface</string>
+    <string name="lorie_app_name">hedgeyos X11 Surface</string>
     <string name="shared_user_label">&TERMUX_APP_NAME; user</string>
 
 

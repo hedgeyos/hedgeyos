@@ -1,8 +1,8 @@
-# Panix
+# hedgeyos
 
 Turn an Android phone into a Debian graphical workstation and home launcher.
 
-[Download Panix alpha for ARM64 Android](https://github.com/Decentricity/Panix/releases/download/panix-v0.1.0-alpha.2/Panix-arm64-v8a.apk)
+[Download hedgeyos alpha for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/hedgeyos-v0.1.0-alpha.2/hedgeyos-arm64-v8a.apk)
 
 Current status: the local `0.1.0-alpha.2` development line now boots the
 bundled Debian 13/XFCE desktop as the Android Home screen on an attached ARM64
@@ -12,13 +12,13 @@ APT, input, recovery, and session-resume acceptance evidence is still pending.
 For the remaining execution checklist and workstation handoff, see
 [`AGENTS.md`](AGENTS.md).
 
-## What Panix Is
+## What hedgeyos Is
 
-Panix is an experimental, independent Termux-derived Android app. The goal is a
+hedgeyos is an experimental, independent Termux-derived Android app. The goal is a
 single APK that bundles a Debian 13 Trixie ARM64 rootfs, embeds Termux:X11, and
 can be selected as the Android Home app so XFCE appears as the phone home screen.
 
-Panix is not affiliated with, endorsed by, or released by the Termux project.
+hedgeyos is not affiliated with, endorsed by, or released by the Termux project.
 
 ## Requirements
 
@@ -39,30 +39,30 @@ Published alpha.2 artifact details:
 
 ## Install
 
-1. Install `Panix-arm64-v8a.apk`.
-2. Open Panix from the app icon.
+1. Install `hedgeyos-arm64-v8a.apk`.
+2. Open hedgeyos from the app icon.
 3. Use Android's Home app chooser when prompted, or tap `Choose Home App`.
-4. During the finished first-boot flow, Panix will verify and extract the
+4. During the finished first-boot flow, hedgeyos will verify and extract the
    bundled Debian rootfs, start embedded X11, then start XFCE.
 
 The current local test build has completed first boot on an ARM64 Android phone:
 it installs bundled PRoot, verifies and extracts the bundled Debian rootfs,
-starts embedded X11 from the Panix APK, and starts XFCE as the Home screen.
-Panix does not require the phone's installed Termux app, a separate Termux:X11
+starts embedded X11 from the hedgeyos APK, and starts XFCE as the Home screen.
+hedgeyos does not require the phone's installed Termux app, a separate Termux:X11
 APK, a VNC app, or a companion APK for this path. See `docs/TEST-REPORT.md` for
 the exact APK, screenshot, logs, package list, and remaining release blockers.
 
 ## Recovery
 
-The Panix Home shell includes:
+The hedgeyos Home shell includes:
 
 - Start Runtime.
 - Restart Desktop.
 - Stop Desktop.
 - Reset Debian.
 - Open X11 Surface.
-- Open Panix Logs.
-- Open Panix Terminal.
+- Open hedgeyos Logs.
+- Open hedgeyos Terminal.
 - Open Android Apps.
 - Open Android Settings.
 - Choose Home App.
@@ -83,7 +83,7 @@ kernel features, daemons, and filesystem semantics.
 ## Build
 
 ```sh
-./scripts/build-panix.sh
+./scripts/build-hedgeyos.sh
 ```
 
 See `docs/BUILDING.md` for current toolchain requirements and blockers.
@@ -101,5 +101,5 @@ See `docs/BUILDING.md` for current toolchain requirements and blockers.
 
 ## License
 
-Panix is GPL-compatible and retains upstream Termux and Termux:X11 notices.
+hedgeyos is GPL-compatible and retains upstream Termux and Termux:X11 notices.
 Complete corresponding source must be available for every release APK.

@@ -375,7 +375,7 @@ final class TermuxInstaller {
         return FileUtils.createDirectoryFile(directory.getAbsolutePath());
     }
 
-    static void setupBootstrapForPanixRuntime(Context context) throws Exception {
+    static void setupBootstrapForHedgeyosRuntime(Context context) throws Exception {
         Error filesDirectoryAccessibleError = TermuxFileUtils.isTermuxFilesDirectoryAccessible(context, true, true);
         if (filesDirectoryAccessibleError != null) {
             throw new RuntimeException(Error.getMinimalErrorString(filesDirectoryAccessibleError));

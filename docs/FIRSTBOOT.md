@@ -1,6 +1,6 @@
 # First Boot
 
-Panix first boot is transactional: install private runtime tools, verify bundled
+hedgeyos first boot is transactional: install private runtime tools, verify bundled
 assets, extract Debian into a staging directory, configure it, then start
 embedded X11 and XFCE.
 
@@ -18,39 +18,39 @@ Target states:
 - `STOPPING`
 - `FAILED`
 
-`PanixRuntimeManager` persists these states under `$PANIX_FILES_DIR/panix-state/`,
-and `PanixRuntimeService` runs the state machine from a foreground service. The
+`HedgeyosRuntimeManager` persists these states under `$HEDGEYOS_FILES_DIR/hedgeyos-state/`,
+and `HedgeyosRuntimeService` runs the state machine from a foreground service. The
 Home activity starts the service, polls status, and exposes recovery controls.
 
 Implemented and device-proven behavior on 2026-07-26:
 
-- Installs the embedded Termux bootstrap into Panix's private `files/usr` path
+- Installs the embedded Termux bootstrap into hedgeyos's private `files/usr` path
   when needed so bundled `bash`, `tar`, and `zstd` are available.
 - Copies, verifies, and extracts the pinned `termux-proot-aarch64.tar.zst`
-  payload into Panix's private prefix.
+  payload into hedgeyos's private prefix.
 - Copies `debian-trixie-arm64-rootfs.tar.zst` and its `.sha256` file from APK
-  assets into Panix private storage.
+  assets into hedgeyos private storage.
 - Verifies the rootfs SHA-256 before extraction.
 - Extracts the rootfs with Android-safe tar flags:
   `--no-same-owner --no-same-permissions --delay-directory-restore`.
 - Builds the rootfs archive without populated `/dev` entries and with hardlinks
   dereferenced so Android app storage can extract it.
 - Extracts into `debian.staging`.
-- Ensures `/home/panix`, `/tmp`, `passwd`, `group`, sudoers, resolver config,
-  and a Panix rootfs version marker exist.
+- Ensures `/home/hedgeyos`, `/tmp`, `passwd`, `group`, sudoers, resolver config,
+  and a hedgeyos rootfs version marker exist.
 - Moves the staging rootfs into `debian` only after health checks pass.
 - Leaves an existing healthy rootfs in place if a new extraction fails.
 - Starts embedded X11 on display `:1` through Android `app_process`.
 - Points embedded X11 `TMPDIR` at the Debian rootfs `/tmp` and
   `XKB_CONFIG_ROOT` at the bundled Debian XKB directory.
 - Starts the XFCE supervisor through bundled PRoot with `PROOT_LOADER`,
-  `PROOT_TMP_DIR`, and `LD_LIBRARY_PATH` pointed at the Panix private prefix.
+  `PROOT_TMP_DIR`, and `LD_LIBRARY_PATH` pointed at the hedgeyos private prefix.
 - Defaults the phone display to scaled mode, `displayScale=200`, fullscreen, and
   visible extra-key bar.
 
 The current local test build reached `RUNNING` on the attached CPH2499 phone.
 Evidence is recorded in `docs/TEST-REPORT.md` and
-`docs/images/panix-scaled-firstboot-xfce.png`.
+`docs/images/hedgeyos-scaled-firstboot-xfce.png`.
 
 Required invariant:
 

@@ -14,11 +14,11 @@ if [ -z "$AAPT2_OVERRIDE" ] && [ -x /data/data/com.termux/files/usr/bin/aapt2 ];
 fi
 ZIPALIGN="${ZIPALIGN:-/data/data/com.termux/files/usr/bin/zipalign}"
 APKSIGNER="${APKSIGNER:-/data/data/com.termux/files/usr/bin/apksigner}"
-PANIX_KEYSTORE_PROPERTIES="${PANIX_KEYSTORE_PROPERTIES:-/data/data/com.termux/files/home/.signing/panix-release.properties}"
-PANIX_SIGN_RELEASE="${PANIX_SIGN_RELEASE:-1}"
-PANIX_USE_EXTERNAL_NATIVE_BUILD="${PANIX_USE_EXTERNAL_NATIVE_BUILD:-0}"
-PANIX_INCLUDE_X11_MODULE="${PANIX_INCLUDE_X11_MODULE:-0}"
-BUILD_LOG_DIR="$REPO_ROOT/build/panix-logs"
+HEDGEYOS_KEYSTORE_PROPERTIES="${HEDGEYOS_KEYSTORE_PROPERTIES:-/data/data/com.termux/files/home/.signing/hedgeyos-release.properties}"
+HEDGEYOS_SIGN_RELEASE="${HEDGEYOS_SIGN_RELEASE:-1}"
+HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD="${HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD:-0}"
+HEDGEYOS_INCLUDE_X11_MODULE="${HEDGEYOS_INCLUDE_X11_MODULE:-0}"
+BUILD_LOG_DIR="$REPO_ROOT/build/hedgeyos-logs"
 ROOTFS_NAME="debian-trixie-arm64-rootfs.tar.zst"
 ROOTFS_ASSET="$REPO_ROOT/app/src/main/assets/debian-trixie-arm64-rootfs.tar.zst"
 ROOTFS_ASSET_SHA="$ROOTFS_ASSET.sha256"
@@ -32,7 +32,7 @@ X11_CPP_DIR="$REPO_ROOT/third_party/termux-x11/lorie/src/main/cpp"
 mkdir -p "$BUILD_LOG_DIR"
 
 fail() {
-    printf 'build-panix: %s\n' "$*" >&2
+    printf 'build-hedgeyos: %s\n' "$*" >&2
     exit 1
 }
 
@@ -57,12 +57,12 @@ require_file "$ANDROID_SDK_ROOT/platforms/android-36/android.jar" "Android SDK p
 if [ -n "$AAPT2_OVERRIDE" ]; then
     require_exec "$AAPT2_OVERRIDE" "aapt2 override"
 fi
-if [ "$PANIX_SIGN_RELEASE" = 1 ]; then
+if [ "$HEDGEYOS_SIGN_RELEASE" = 1 ]; then
     require_exec "$ZIPALIGN" "zipalign"
     require_exec "$APKSIGNER" "apksigner"
-    require_file "$PANIX_KEYSTORE_PROPERTIES" "Panix signing properties"
+    require_file "$HEDGEYOS_KEYSTORE_PROPERTIES" "hedgeyos signing properties"
 fi
-if [ "$PANIX_INCLUDE_X11_MODULE" = 1 ]; then
+if [ "$HEDGEYOS_INCLUDE_X11_MODULE" = 1 ]; then
     require_file "$X11_CPP_DIR/xorgproto/include/X11/Xpoll.h.in" "Termux:X11 xorgproto submodule; run git submodule update --init --recursive"
     require_file "$X11_CPP_DIR/xserver/dix/main.c" "Termux:X11 xserver submodule; run git submodule update --init --recursive"
     require_file "$X11_CPP_DIR/libx11/src/OpenDis.c" "Termux:X11 libx11 submodule; run git submodule update --init --recursive"
@@ -89,7 +89,7 @@ require_file "$ROOTFS_SHA_FILE" "bundled Debian rootfs checksum"
 cp "$ROOTFS_SHA_FILE" "$ROOTFS_ASSET_SHA"
 require_file "$ROOTFS_ASSET_SHA" "bundled Debian rootfs checksum asset"
 
-if [ "$PANIX_USE_EXTERNAL_NATIVE_BUILD" != 1 ]; then
+if [ "$HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD" != 1 ]; then
     "$SCRIPT_DIR/build-bootstrap-lib.sh"
     "$SCRIPT_DIR/build-terminal-emulator-lib.sh"
     "$SCRIPT_DIR/build-shared-lib.sh"
@@ -127,30 +127,30 @@ if ! "$GRADLE_BIN" $GRADLE_ARGS > "$BUILD_LOG_DIR/assembleRelease.log" 2>&1; the
 fi
 cat "$BUILD_LOG_DIR/assembleRelease.log"
 
-APK="$REPO_ROOT/app/build/outputs/apk/release/Panix-arm64-v8a.apk"
+APK="$REPO_ROOT/app/build/outputs/apk/release/hedgeyos-arm64-v8a.apk"
 require_file "$APK" "release APK"
 
-if [ "$PANIX_SIGN_RELEASE" = 1 ]; then
+if [ "$HEDGEYOS_SIGN_RELEASE" = 1 ]; then
     set -a
-    . "$PANIX_KEYSTORE_PROPERTIES"
+    . "$HEDGEYOS_KEYSTORE_PROPERTIES"
     set +a
 
-    : "${PANIX_KEYSTORE:?missing PANIX_KEYSTORE in signing properties}"
-    : "${PANIX_KEY_ALIAS:?missing PANIX_KEY_ALIAS in signing properties}"
-    : "${PANIX_KEYSTORE_PASSWORD:?missing PANIX_KEYSTORE_PASSWORD in signing properties}"
-    : "${PANIX_KEY_PASSWORD:?missing PANIX_KEY_PASSWORD in signing properties}"
+    : "${HEDGEYOS_KEYSTORE:?missing HEDGEYOS_KEYSTORE in signing properties}"
+    : "${HEDGEYOS_KEY_ALIAS:?missing HEDGEYOS_KEY_ALIAS in signing properties}"
+    : "${HEDGEYOS_KEYSTORE_PASSWORD:?missing HEDGEYOS_KEYSTORE_PASSWORD in signing properties}"
+    : "${HEDGEYOS_KEY_PASSWORD:?missing HEDGEYOS_KEY_PASSWORD in signing properties}"
 
-    require_file "$PANIX_KEYSTORE" "Panix release keystore"
+    require_file "$HEDGEYOS_KEYSTORE" "hedgeyos release keystore"
 
-    ALIGNED_APK="$REPO_ROOT/app/build/outputs/apk/release/Panix-arm64-v8a-aligned.apk"
-    SIGNED_APK="$REPO_ROOT/app/build/outputs/apk/release/Panix-arm64-v8a-signed.apk"
+    ALIGNED_APK="$REPO_ROOT/app/build/outputs/apk/release/hedgeyos-arm64-v8a-aligned.apk"
+    SIGNED_APK="$REPO_ROOT/app/build/outputs/apk/release/hedgeyos-arm64-v8a-signed.apk"
 
     "$ZIPALIGN" -f -p 4 "$APK" "$ALIGNED_APK"
     "$APKSIGNER" sign \
-        --ks "$PANIX_KEYSTORE" \
-        --ks-key-alias "$PANIX_KEY_ALIAS" \
-        --ks-pass env:PANIX_KEYSTORE_PASSWORD \
-        --key-pass env:PANIX_KEY_PASSWORD \
+        --ks "$HEDGEYOS_KEYSTORE" \
+        --ks-key-alias "$HEDGEYOS_KEY_ALIAS" \
+        --ks-pass env:HEDGEYOS_KEYSTORE_PASSWORD \
+        --key-pass env:HEDGEYOS_KEY_PASSWORD \
         --out "$SIGNED_APK" \
         "$ALIGNED_APK"
     "$APKSIGNER" verify --verbose "$SIGNED_APK"

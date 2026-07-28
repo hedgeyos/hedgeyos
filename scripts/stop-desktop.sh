@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 
-PANIX_FILES_DIR="${PANIX_FILES_DIR:-/data/data/io.github.decentricity.panix/files}"
-PANIX_LOCK_DIR="${PANIX_LOCK_DIR:-$PANIX_FILES_DIR/run}"
-LOCK_FILE="$PANIX_LOCK_DIR/desktop.lock"
+HEDGEYOS_FILES_DIR="${HEDGEYOS_FILES_DIR:-/data/data/org.hedgeyos/files}"
+HEDGEYOS_LOCK_DIR="${HEDGEYOS_LOCK_DIR:-$HEDGEYOS_FILES_DIR/run}"
+LOCK_FILE="$HEDGEYOS_LOCK_DIR/desktop.lock"
 
 [ -f "$LOCK_FILE" ] || exit 0
 PID=$(cat "$LOCK_FILE")

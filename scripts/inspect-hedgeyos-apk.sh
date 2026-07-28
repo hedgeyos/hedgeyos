@@ -7,7 +7,7 @@ ROOTFS_PROVENANCE="${3:-}"
 AAPT="${AAPT:-aapt}"
 
 fail() {
-    printf 'inspect-panix-apk: %s\n' "$*" >&2
+    printf 'inspect-hedgeyos-apk: %s\n' "$*" >&2
     exit 1
 }
 
@@ -57,8 +57,8 @@ write_activity_block() {
     [ -s "$activity_out" ] || fail "APK manifest missing activity: $activity_name"
 }
 
-[ -n "$APK" ] || fail "usage: scripts/inspect-panix-apk.sh <apk> <out-dir> [rootfs-provenance]"
-[ -n "$OUT_DIR" ] || fail "usage: scripts/inspect-panix-apk.sh <apk> <out-dir> [rootfs-provenance]"
+[ -n "$APK" ] || fail "usage: scripts/inspect-hedgeyos-apk.sh <apk> <out-dir> [rootfs-provenance]"
+[ -n "$OUT_DIR" ] || fail "usage: scripts/inspect-hedgeyos-apk.sh <apk> <out-dir> [rootfs-provenance]"
 require_file "$APK" "APK"
 require_exec "$AAPT"
 require_exec unzip
@@ -70,40 +70,40 @@ mkdir -p "$OUT_DIR"
 "$AAPT" dump xmltree "$APK" AndroidManifest.xml > "$OUT_DIR/androidmanifest-xmltree.txt"
 unzip -l "$APK" > "$OUT_DIR/apk-contents.txt"
 unzip -lv "$APK" > "$OUT_DIR/apk-contents-verbose.txt"
-sha256sum "$APK" > "$OUT_DIR/Panix-arm64-v8a.apk.sha256"
+sha256sum "$APK" > "$OUT_DIR/hedgeyos-arm64-v8a.apk.sha256"
 
-APP_HOME_ACTIVITY="$OUT_DIR/activity-com.termux.app.PanixHomeActivity.txt"
-X11_HOME_ACTIVITY="$OUT_DIR/activity-com.termux.x11.PanixHomeActivity.txt"
+APP_HOME_ACTIVITY="$OUT_DIR/activity-com.termux.app.HedgeyosHomeActivity.txt"
+X11_HOME_ACTIVITY="$OUT_DIR/activity-com.termux.x11.HedgeyosHomeActivity.txt"
 X11_MAIN_ACTIVITY="$OUT_DIR/activity-com.termux.x11.MainActivity.txt"
-write_activity_block "com.termux.app.PanixHomeActivity" "$APP_HOME_ACTIVITY"
-write_activity_block "com.termux.x11.PanixHomeActivity" "$X11_HOME_ACTIVITY"
+write_activity_block "com.termux.app.HedgeyosHomeActivity" "$APP_HOME_ACTIVITY"
+write_activity_block "com.termux.x11.HedgeyosHomeActivity" "$X11_HOME_ACTIVITY"
 write_activity_block "com.termux.x11.MainActivity" "$X11_MAIN_ACTIVITY"
 
-contains "$OUT_DIR/aapt-badging.txt" "package: name='io.github.decentricity.panix'" ||
-    fail "APK package id is not io.github.decentricity.panix"
-contains "$OUT_DIR/aapt-badging.txt" "application-label:'Panix'" ||
-    fail "APK application label is not Panix"
+contains "$OUT_DIR/aapt-badging.txt" "package: name='org.hedgeyos'" ||
+    fail "APK package id is not org.hedgeyos"
+contains "$OUT_DIR/aapt-badging.txt" "application-label:'hedgeyos'" ||
+    fail "APK application label is not hedgeyos"
 contains "$OUT_DIR/aapt-badging.txt" "sdkVersion:'26'" ||
     fail "APK min SDK is not 26"
 contains "$OUT_DIR/aapt-badging.txt" "targetSdkVersion:'28'" ||
     fail "APK target SDK is not 28"
 contains "$OUT_DIR/aapt-badging.txt" "native-code: 'arm64-v8a'" ||
     fail "APK is not restricted to arm64-v8a native code"
-contains "$OUT_DIR/aapt-badging.txt" "launchable-activity: name='com.termux.x11.PanixHomeActivity'" ||
-    fail "APK launcher is not the X11-backed Panix HOME activity"
+contains "$OUT_DIR/aapt-badging.txt" "launchable-activity: name='com.termux.x11.HedgeyosHomeActivity'" ||
+    fail "APK launcher is not the X11-backed hedgeyos HOME activity"
 
 contains "$APP_HOME_ACTIVITY" "android:enabled(0x0101000e)=(type 0x12)0x0" ||
-    fail "fallback Panix HOME activity is enabled in the X11 APK"
+    fail "fallback hedgeyos HOME activity is enabled in the X11 APK"
 contains "$X11_HOME_ACTIVITY" "android:enabled(0x0101000e)=(type 0x12)0xffffffff" ||
-    fail "X11-backed Panix HOME activity is not enabled"
+    fail "X11-backed hedgeyos HOME activity is not enabled"
 contains "$X11_HOME_ACTIVITY" "android.intent.category.LAUNCHER" ||
-    fail "X11-backed Panix HOME activity is missing CATEGORY_LAUNCHER"
+    fail "X11-backed hedgeyos HOME activity is missing CATEGORY_LAUNCHER"
 contains "$X11_HOME_ACTIVITY" "android.intent.category.HOME" ||
-    fail "X11-backed Panix HOME activity is missing CATEGORY_HOME"
+    fail "X11-backed hedgeyos HOME activity is missing CATEGORY_HOME"
 contains "$X11_HOME_ACTIVITY" "android.intent.category.DEFAULT" ||
-    fail "X11-backed Panix HOME activity is missing CATEGORY_DEFAULT"
+    fail "X11-backed hedgeyos HOME activity is missing CATEGORY_DEFAULT"
 contains "$X11_HOME_ACTIVITY" "android.intent.category.LEANBACK_LAUNCHER" ||
-    fail "X11-backed Panix HOME activity is missing CATEGORY_LEANBACK_LAUNCHER"
+    fail "X11-backed hedgeyos HOME activity is missing CATEGORY_LEANBACK_LAUNCHER"
 not_contains_regex "$OUT_DIR/aapt-badging.txt" "launchable-activity: name='com\\.termux\\.x11\\.MainActivity'" ||
     fail "Termux:X11 MainActivity is still exposed as a launcher"
 not_contains_regex "$X11_MAIN_ACTIVITY" "android.intent.category.(LAUNCHER|HOME|LEANBACK_LAUNCHER)" ||
@@ -124,7 +124,7 @@ awk '$NF == "lib/arm64-v8a/libXlorie.so" && $2 == "Stored" { found=1 } END { exi
 contains "$OUT_DIR/apk-contents.txt" "lib/arm64-v8a/libtermux.so" ||
     fail "APK does not contain Termux terminal native library"
 contains "$OUT_DIR/apk-contents.txt" "lib/arm64-v8a/libtermux-bootstrap.so" ||
-    fail "APK does not contain Panix bootstrap native library"
+    fail "APK does not contain hedgeyos bootstrap native library"
 contains "$OUT_DIR/apk-contents.txt" "lib/arm64-v8a/liblocal-socket.so" ||
     fail "APK does not contain local socket native library"
 not_contains_regex "$OUT_DIR/apk-contents.txt" "vnc|tigervnc|x11vnc|novnc|xrdp" ||
@@ -138,9 +138,9 @@ fi
 
 {
     printf 'apk=%s\n' "$APK"
-    printf 'sha256=%s\n' "$(cut -d ' ' -f 1 "$OUT_DIR/Panix-arm64-v8a.apk.sha256")"
-    printf 'package=io.github.decentricity.panix\n'
-    printf 'launcher=com.termux.x11.PanixHomeActivity\n'
+    printf 'sha256=%s\n' "$(cut -d ' ' -f 1 "$OUT_DIR/hedgeyos-arm64-v8a.apk.sha256")"
+    printf 'package=org.hedgeyos\n'
+    printf 'launcher=com.termux.x11.HedgeyosHomeActivity\n'
     printf 'fallback_home_activity_enabled=false\n'
     printf 'home_category=present\n'
     printf 'x11_main_launcher=absent\n'

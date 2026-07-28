@@ -1,4 +1,4 @@
-name: Build Panix
+name: Build hedgeyos
 
 on:
   push:
@@ -50,43 +50,43 @@ jobs:
 
       - name: Build unsigned ARM64 APK
         env:
-          PANIX_USE_EXTERNAL_NATIVE_BUILD: "1"
-          PANIX_INCLUDE_X11_MODULE: "1"
-          PANIX_SIGN_RELEASE: "0"
+          HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD: "1"
+          HEDGEYOS_INCLUDE_X11_MODULE: "1"
+          HEDGEYOS_SIGN_RELEASE: "0"
         run: |
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
-          ./scripts/build-panix.sh
+          ./scripts/build-hedgeyos.sh
 
       - name: Verify outputs
         run: |
-          test -f app/build/outputs/apk/release/Panix-arm64-v8a.apk
-          test -f app/build/outputs/apk/release/Panix-arm64-v8a.apk.sha256
+          test -f app/build/outputs/apk/release/hedgeyos-arm64-v8a.apk
+          test -f app/build/outputs/apk/release/hedgeyos-arm64-v8a.apk.sha256
           cd app/build/outputs/apk/release
-          sha256sum -c Panix-arm64-v8a.apk.sha256
+          sha256sum -c hedgeyos-arm64-v8a.apk.sha256
 
       - name: Inspect APK structure
         run: |
           AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt" \
-            ./scripts/inspect-panix-apk.sh \
-            app/build/outputs/apk/release/Panix-arm64-v8a.apk \
-            build/panix-inspection \
+            ./scripts/inspect-hedgeyos-apk.sh \
+            app/build/outputs/apk/release/hedgeyos-arm64-v8a.apk \
+            build/hedgeyos-inspection \
             rootfs/manifests/debian-trixie-arm64-rootfs.provenance
 
       - name: Upload APK inspection artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Panix-apk-inspection
-          path: build/panix-inspection/**
+          name: hedgeyos-apk-inspection
+          path: build/hedgeyos-inspection/**
           if-no-files-found: error
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Panix-arm64-v8a-ci
+          name: hedgeyos-arm64-v8a-ci
           path: |
-            app/build/outputs/apk/release/Panix-arm64-v8a.apk
-            app/build/outputs/apk/release/Panix-arm64-v8a.apk.sha256
+            app/build/outputs/apk/release/hedgeyos-arm64-v8a.apk
+            app/build/outputs/apk/release/hedgeyos-arm64-v8a.apk.sha256
             rootfs/manifests/**
-            build/panix-logs/**
-            build/panix-inspection/**
+            build/hedgeyos-logs/**
+            build/hedgeyos-inspection/**
           if-no-files-found: error

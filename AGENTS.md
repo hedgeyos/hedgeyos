@@ -1,4 +1,4 @@
-# Panix Agent Handoff
+# hedgeyos Agent Handoff
 
 This repository is mid-flight. Do not treat a green build as a finished
 product. The remaining goal is to turn the current source into an
@@ -6,19 +6,19 @@ acceptance-tested, publicly downloadable `v0.1.0` release APK.
 
 ## Product Target
 
-Panix must be a single installable ARM64 Android APK that turns an ordinary,
+hedgeyos must be a single installable ARM64 Android APK that turns an ordinary,
 unrooted Android phone into a Debian 13 Trixie graphical workstation and Android
 Home launcher.
 
 The final user flow must be:
 
-1. Download one `Panix-arm64-v8a.apk`.
+1. Download one `hedgeyos-arm64-v8a.apk`.
 2. Install it normally.
-3. Open Panix.
-4. Select Panix as the Android Home app when prompted.
-5. Panix verifies and extracts its bundled Debian rootfs without downloading a
+3. Open hedgeyos.
+4. Select hedgeyos as the Android Home app when prompted.
+5. hedgeyos verifies and extracts its bundled Debian rootfs without downloading a
    distribution at runtime.
-6. Panix starts its embedded Termux:X11 server.
+6. hedgeyos starts its embedded Termux:X11 server.
 7. XFCE appears as the Android home screen.
 8. Repeated Home presses return to the same Debian desktop session.
 9. A Debian terminal can run ordinary commands such as `apt update`,
@@ -32,32 +32,32 @@ Surface.
 
 ## Current State
 
-- Repository: `https://github.com/Decentricity/Panix`
+- Repository: `https://github.com/hedgeyos/hedgeyos`
 - Branch: `master`
 - Current head at handoff: `8339b9468aee2c72ea4163dd81442e07a8ed38b4`
 - Current Android version: `versionCode 2`, `versionName 0.1.0-alpha.2`
 - Latest green CI:
-  - Build Panix: `30152849103`
+  - Build hedgeyos: `30152849103`
   - Unit tests: `30152849112`
   - Gradle wrapper validation: `30152849114`
-- Latest CI inspection artifact: `Panix-apk-inspection` artifact `8618274550`
-- Latest unsigned CI APK artifact: `Panix-arm64-v8a-ci` artifact `8618275650`
+- Latest CI inspection artifact: `hedgeyos-apk-inspection` artifact `8618274550`
+- Latest unsigned CI APK artifact: `hedgeyos-arm64-v8a-ci` artifact `8618275650`
 
 The latest CI inspection records:
 
-- Package id `io.github.decentricity.panix`
-- Label `Panix`
+- Package id `org.hedgeyos`
+- Label `hedgeyos`
 - Min SDK 26, target SDK 28
 - Native code `arm64-v8a`
-- Launcher/Home activity `com.termux.x11.PanixHomeActivity`
-- Fallback `com.termux.app.PanixHomeActivity` disabled in X11 builds
+- Launcher/Home activity `com.termux.x11.HedgeyosHomeActivity`
+- Fallback `com.termux.app.HedgeyosHomeActivity` disabled in X11 builds
 - `com.termux.x11.MainActivity` not exposed as launcher/Home
 - Bundled Debian rootfs asset and checksum
 - Bundled PRoot payload and checksum
 - Embedded `libXlorie.so`
 - No obvious VNC/RDP files in APK listing
 
-The published GitHub prerelease `panix-v0.1.0-alpha.1` is older. It is signed
+The published GitHub prerelease `hedgeyos-v0.1.0-alpha.1` is older. It is signed
 and downloadable, but it is not the final release and has not passed the full
 device acceptance suite.
 
@@ -89,8 +89,8 @@ as the acceptance target.
 1. Clone a fresh copy and fetch submodules:
 
    ```sh
-   git clone --recursive https://github.com/Decentricity/Panix.git
-   cd Panix
+   git clone --recursive https://github.com/hedgeyos/hedgeyos.git
+   cd hedgeyos
    ```
 
 2. Install standard Linux Android build prerequisites: JDK 21, Android SDK
@@ -102,23 +102,23 @@ as the acceptance target.
 
    ```sh
    git submodule update --init --recursive
-   PANIX_INCLUDE_X11_MODULE=1 \
-   PANIX_USE_EXTERNAL_NATIVE_BUILD=1 \
-   PANIX_SIGN_RELEASE=0 \
-   ./scripts/build-panix.sh
+   HEDGEYOS_INCLUDE_X11_MODULE=1 \
+   HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD=1 \
+   HEDGEYOS_SIGN_RELEASE=0 \
+   ./scripts/build-hedgeyos.sh
    ```
 
 4. Run structural inspection:
 
    ```sh
    AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt" \
-     ./scripts/inspect-panix-apk.sh \
-     app/build/outputs/apk/release/Panix-arm64-v8a.apk \
-     build/panix-inspection \
+     ./scripts/inspect-hedgeyos-apk.sh \
+     app/build/outputs/apk/release/hedgeyos-arm64-v8a.apk \
+     build/hedgeyos-inspection \
      rootfs/manifests/debian-trixie-arm64-rootfs.provenance
    ```
 
-5. Sign with the existing Panix release key. Keep the keystore and passwords
+5. Sign with the existing hedgeyos release key. Keep the keystore and passwords
    outside the repo. Do not print or commit secrets.
 
 6. Install through Android's normal package installer or through `adb install`
@@ -130,10 +130,10 @@ as the acceptance target.
 Do not tag or publish final `v0.1.0` until these are actually exercised on
 device and recorded in `docs/TEST-REPORT.md`:
 
-1. Panix installs without Termux, Termux:X11, UserLAnd, or any VNC app
+1. hedgeyos installs without Termux, Termux:X11, UserLAnd, or any VNC app
    installed.
-2. Panix opens from its application icon.
-3. Android offers Panix as a Home application.
+2. hedgeyos opens from its application icon.
+3. Android offers hedgeyos as a Home application.
 4. First boot requires no rootfs download.
 5. The bundled rootfs is verified and extracted successfully.
 6. The embedded X11 surface appears.
@@ -147,9 +147,9 @@ device and recorded in `docs/TEST-REPORT.md`:
 14. Installing a small package through Debian APT works.
 15. Pressing Home repeatedly returns to the same session without duplicate
     processes.
-16. Opening an Android app and pressing Home returns to Panix.
-17. Killing the Panix activity does not corrupt Debian.
-18. Relaunching Panix recovers or cleanly restarts the desktop.
+16. Opening an Android app and pressing Home returns to hedgeyos.
+17. Killing the hedgeyos activity does not corrupt Debian.
+18. Relaunching hedgeyos recovers or cleanly restarts the desktop.
 19. Restart Desktop works.
 20. Reset Debian works.
 21. No VNC server, viewer, or TCP VNC port exists.
@@ -161,7 +161,7 @@ Also capture screenshots under `docs/images/` for:
 - First-boot setup
 - XFCE as Android home screen
 - XFCE Terminal showing Debian release information
-- Android app drawer or Settings launched from Panix
+- Android app drawer or Settings launched from hedgeyos
 
 ## Final Release Gate
 
@@ -170,12 +170,12 @@ After acceptance passes:
 1. Update `README.md`, `docs/TEST-REPORT.md`, `docs/KNOWN-ISSUES.md`, and any
    affected architecture/build docs with the real tested status.
 2. Ensure `README.md` links the stable latest-release URL:
-   `https://github.com/Decentricity/Panix/releases/latest/download/Panix-arm64-v8a.apk`
+   `https://github.com/hedgeyos/hedgeyos/releases/latest/download/hedgeyos-arm64-v8a.apk`
 3. Tag `v0.1.0`.
-4. Create GitHub Release `Panix v0.1.0 - Debian as your Android home screen`.
+4. Create GitHub Release `hedgeyos v0.1.0 - Debian as your Android home screen`.
 5. Upload:
-   - `Panix-arm64-v8a.apk`
-   - `Panix-arm64-v8a.apk.sha256`
+   - `hedgeyos-arm64-v8a.apk`
+   - `hedgeyos-arm64-v8a.apk.sha256`
    - signing verification report
    - rootfs and PRoot provenance/checksum files
 6. Verify the latest-release download URL works without GitHub authentication.
@@ -183,7 +183,7 @@ After acceptance passes:
 ## Ground Rules For Future Agents
 
 - Keep claims honest. A green Gradle build is not acceptance.
-- Keep Panix an independent Termux derivative; do not imply official Termux
+- Keep hedgeyos an independent Termux derivative; do not imply official Termux
   affiliation.
 - Preserve GPL-compatible source availability and third-party notices.
 - Do not commit APKs, rootfs blobs, keystores, signing passwords, or generated

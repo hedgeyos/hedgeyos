@@ -13,15 +13,15 @@ import android.os.IBinder;
 import com.termux.BuildConfig;
 import com.termux.R;
 
-public final class PanixRuntimeService extends Service {
+public final class HedgeyosRuntimeService extends Service {
 
-    static final String ACTION_START = "io.github.decentricity.panix.runtime.START";
-    static final String ACTION_RESTART_DESKTOP = "io.github.decentricity.panix.runtime.RESTART_DESKTOP";
-    static final String ACTION_STOP_DESKTOP = "io.github.decentricity.panix.runtime.STOP_DESKTOP";
-    static final String ACTION_RESET_DEBIAN = "io.github.decentricity.panix.runtime.RESET_DEBIAN";
+    static final String ACTION_START = "org.hedgeyos.runtime.START";
+    static final String ACTION_RESTART_DESKTOP = "org.hedgeyos.runtime.RESTART_DESKTOP";
+    static final String ACTION_STOP_DESKTOP = "org.hedgeyos.runtime.STOP_DESKTOP";
+    static final String ACTION_RESET_DEBIAN = "org.hedgeyos.runtime.RESET_DEBIAN";
 
-    private static final String CHANNEL_ID = "panix_runtime";
-    private static final String CHANNEL_NAME = "Panix Runtime";
+    private static final String CHANNEL_ID = "hedgeyos_runtime";
+    private static final String CHANNEL_NAME = "hedgeyos Runtime";
     private static final int NOTIFICATION_ID = 4242;
 
     @Override
@@ -35,16 +35,16 @@ public final class PanixRuntimeService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? ACTION_START : intent.getAction();
         if (ACTION_STOP_DESKTOP.equals(action)) {
-            PanixRuntimeManager.stopDesktop(this);
+            HedgeyosRuntimeManager.stopDesktop(this);
             stopForeground(true);
             stopSelf(startId);
             return START_NOT_STICKY;
         } else if (ACTION_RESET_DEBIAN.equals(action)) {
-            PanixRuntimeManager.resetDebianAsync(this);
+            HedgeyosRuntimeManager.resetDebianAsync(this);
         } else if (ACTION_RESTART_DESKTOP.equals(action)) {
-            PanixRuntimeManager.restartDesktopAsync(this);
+            HedgeyosRuntimeManager.restartDesktopAsync(this);
         } else {
-            PanixRuntimeManager.startAsync(this);
+            HedgeyosRuntimeManager.startAsync(this);
         }
 
         startForeground(NOTIFICATION_ID, buildNotification());
@@ -73,7 +73,7 @@ public final class PanixRuntimeService extends Service {
     }
 
     private static void startWithAction(Context context, String action) {
-        Intent intent = new Intent(context, PanixRuntimeService.class).setAction(action);
+        Intent intent = new Intent(context, HedgeyosRuntimeService.class).setAction(action);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent);
         } else {
@@ -83,24 +83,24 @@ public final class PanixRuntimeService extends Service {
 
     private Notification buildNotification() {
         Intent contentIntent = new Intent();
-        if (BuildConfig.PANIX_INCLUDE_X11_MODULE) {
-            contentIntent.setClassName(this, "com.termux.x11.PanixHomeActivity");
+        if (BuildConfig.HEDGEYOS_INCLUDE_X11_MODULE) {
+            contentIntent.setClassName(this, "com.termux.x11.HedgeyosHomeActivity");
         } else {
-            contentIntent.setClass(this, PanixHomeActivity.class);
+            contentIntent.setClass(this, HedgeyosHomeActivity.class);
         }
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             flags |= PendingIntent.FLAG_IMMUTABLE;
         }
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, contentIntent, flags);
-        PanixRuntimeManager.RuntimeStatus status = PanixRuntimeManager.getStatus(this);
+        HedgeyosRuntimeManager.RuntimeStatus status = HedgeyosRuntimeManager.getStatus(this);
 
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
             ? new Notification.Builder(this, CHANNEL_ID)
             : new Notification.Builder(this);
         return builder
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Panix desktop runtime")
+            .setContentTitle("hedgeyos desktop runtime")
             .setContentText(status.state + ": " + status.detail)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

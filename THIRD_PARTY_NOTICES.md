@@ -1,6 +1,6 @@
 # Third Party Notices
 
-Panix is an independent derivative and is not an official Termux release.
+hedgeyos is an independent derivative and is not an official Termux release.
 
 ## Termux Application
 
@@ -24,7 +24,7 @@ Panix is an independent derivative and is not an official Termux release.
 
 - Source packages: Termux `proot`, `libandroid-shmem`, and `libtalloc`.
 - Binary source: https://packages.termux.dev/apt/termux-main
-- Use: Bundled unprivileged Debian runtime payload under Panix's private prefix.
+- Use: Bundled unprivileged Debian runtime payload under hedgeyos's private prefix.
 - License notices: The payload keeps package copyright files under
   `usr/share/doc/*/copyright`.
 
@@ -39,5 +39,5 @@ Panix is an independent derivative and is not an official Termux release.
 - Source: https://www.debian.org/
 - Use: Target Debian 13 Trixie ARM64 userspace.
 
-Panix release artifacts must include complete corresponding source and the exact
+hedgeyos release artifacts must include complete corresponding source and the exact
 rootfs provenance recorded in `UPSTREAMS.md` and `rootfs/manifests/`.

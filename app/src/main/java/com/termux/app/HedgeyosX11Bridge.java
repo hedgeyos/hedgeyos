@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-final class PanixX11Bridge {
+final class HedgeyosX11Bridge {
 
     static final String DISPLAY = ":1";
 
@@ -20,13 +20,13 @@ final class PanixX11Bridge {
 
     private static Process sX11Process;
 
-    private PanixX11Bridge() {}
+    private HedgeyosX11Bridge() {}
 
     static boolean isAvailable(Context context) {
         try {
             Class.forName("com.termux.x11.CmdEntryPoint", false, context.getClassLoader());
             Class.forName("com.termux.x11.MainActivity", false, context.getClassLoader());
-            Class.forName("com.termux.x11.PanixHomeActivity", false, context.getClassLoader());
+            Class.forName("com.termux.x11.HedgeyosHomeActivity", false, context.getClassLoader());
             return true;
         } catch (ClassNotFoundException e) {
             return false;
@@ -61,7 +61,7 @@ final class PanixX11Bridge {
         command.add(appProcess.getAbsolutePath());
         command.add("-Xnoimage-dex2oat");
         command.add("/");
-        command.add("--nice-name=panix-x11");
+        command.add("--nice-name=hedgeyos-x11");
         command.add("com.termux.x11.CmdEntryPoint");
         command.add(DISPLAY);
 
@@ -125,7 +125,7 @@ final class PanixX11Bridge {
 
     static void openSurface(Context context) {
         Intent intent = new Intent();
-        intent.setClassName(context.getPackageName(), "com.termux.x11.PanixHomeActivity");
+        intent.setClassName(context.getPackageName(), "com.termux.x11.HedgeyosHomeActivity");
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
     }
@@ -143,7 +143,7 @@ final class PanixX11Bridge {
 
     private static void appendLog(Context context, File file, String text) {
         appendLog(file, text);
-        PanixRuntimeManager.appendPublicLog(context, file.getName(), text + "\n");
+        HedgeyosRuntimeManager.appendPublicLog(context, file.getName(), text + "\n");
     }
 
     private static String readFile(File file) {

@@ -2,7 +2,7 @@
 
 - No final `v0.1.0` release APK has passed the complete acceptance suite yet.
 - The main on-device boot gate now passes for the local `0.1.0-alpha.3` test
-  build: Panix installs on the attached ARM64 phone, can be selected as Home,
+  build: hedgeyos installs on the attached ARM64 phone, can be selected as Home,
   verifies/extracts the bundled Debian rootfs, starts embedded X11, reaches
   XFCE with runtime state `RUNNING`, opens a Debian XFCE terminal, runs
   `apt update`, and installs/runs `hello`.
@@ -10,15 +10,15 @@
   black-screen boot failure: in-app Reset Debian, a true clean first boot of
   the exact final artifact, physical keyboard proof, and launcher-icon tap
   proof still need device evidence before final `v0.1.0`.
-- Termux must not be removed from the test phone. Panix independence should be
+- Termux must not be removed from the test phone. hedgeyos independence should be
   proven from APK contents, code paths, packages, and processes. Current
-  evidence shows Panix uses its own package, bundled PRoot/rootfs, and embedded
+  evidence shows hedgeyos uses its own package, bundled PRoot/rootfs, and embedded
   X11; it does not require the installed Termux app, a separate Termux:X11 APK,
   or VNC.
 - `third_party/termux-x11` is vendored as an optional module and still contains
-  upstream `com.termux.x11` namespace assumptions. The current Panix build works
-  by embedding those classes inside the Panix APK and starting
-  `CmdEntryPoint` with `CLASSPATH` pointed at Panix's own `base.apk`.
+  upstream `com.termux.x11` namespace assumptions. The current hedgeyos build works
+  by embedding those classes inside the hedgeyos APK and starting
+  `CmdEntryPoint` with `CLASSPATH` pointed at hedgeyos's own `base.apk`.
 - Some native Termux:X11 code still has upstream path assumptions. Current
   runtime overrides provide the working `TMPDIR` and `XKB_CONFIG_ROOT`, but this
   area should remain part of release regression testing.

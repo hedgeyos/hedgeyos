@@ -19,20 +19,23 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.termux.R;
+
 import java.util.Collections;
 import java.util.List;
 
-public final class PanixHomeActivity extends Activity {
+public final class HedgeyosHomeActivity extends Activity {
 
-    private static final int BACKGROUND_COLOR = Color.rgb(8, 10, 14);
-    private static final int PANEL_COLOR = Color.rgb(18, 24, 32);
-    private static final int TEXT_COLOR = Color.rgb(242, 246, 250);
-    private static final int MUTED_TEXT_COLOR = Color.rgb(172, 184, 196);
-    private static final int ACCENT_COLOR = Color.rgb(74, 222, 128);
+    private static final int PANEL_COLOR = Color.argb(228, 38, 33, 29);
+    private static final int TEXT_COLOR = Color.rgb(255, 248, 230);
+    private static final int MUTED_TEXT_COLOR = Color.rgb(222, 205, 174);
+    private static final int ACCENT_COLOR = Color.rgb(238, 184, 91);
 
     private final Handler statusHandler = new Handler(Looper.getMainLooper());
     private final Runnable statusPoller = new Runnable() {
@@ -48,7 +51,7 @@ public final class PanixHomeActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(createContentView());
-        PanixRuntimeService.requestStart(this);
+        HedgeyosRuntimeService.requestStart(this);
     }
 
     @Override
@@ -64,9 +67,22 @@ public final class PanixHomeActivity extends Activity {
     }
 
     private View createContentView() {
+        FrameLayout frame = new FrameLayout(this);
+
+        ImageView wallpaper = new ImageView(this);
+        wallpaper.setImageResource(R.drawable.hedgeyos_wallpaper);
+        wallpaper.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        wallpaper.setAlpha(0.72f);
+        frame.addView(wallpaper, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
+
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackgroundColor(BACKGROUND_COLOR);
+        scrollView.setBackgroundColor(Color.argb(112, 8, 9, 12));
+        frame.addView(scrollView, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -76,8 +92,15 @@ public final class PanixHomeActivity extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT));
 
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.hedgeyos_icon);
+        icon.setContentDescription("hedgeyos");
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(96), dp(96));
+        iconParams.setMargins(0, 0, 0, dp(14));
+        root.addView(icon, iconParams);
+
         TextView title = new TextView(this);
-        title.setText("Panix");
+        title.setText("hedgeyos");
         title.setTextColor(TEXT_COLOR);
         title.setTextSize(34);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -102,19 +125,19 @@ public final class PanixHomeActivity extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        panel.addView(button("Start Runtime", v -> PanixRuntimeService.requestStart(this)));
-        panel.addView(button("Restart Desktop", v -> PanixRuntimeService.requestRestartDesktop(this)));
-        panel.addView(button("Stop Desktop", v -> PanixRuntimeService.requestStopDesktop(this)));
+        panel.addView(button("Start Runtime", v -> HedgeyosRuntimeService.requestStart(this)));
+        panel.addView(button("Restart Desktop", v -> HedgeyosRuntimeService.requestRestartDesktop(this)));
+        panel.addView(button("Stop Desktop", v -> HedgeyosRuntimeService.requestStopDesktop(this)));
         panel.addView(button("Reset Debian", v -> confirmResetDebian()));
         panel.addView(button("Open X11 Surface", v -> openX11Surface()));
-        panel.addView(button("Open Panix Logs", v -> showPanixLogs()));
-        panel.addView(button("Open Panix Terminal", v -> openPanixTerminal()));
-        panel.addView(button("Run Debian APT Check", v -> PanixRuntimeManager.runDebianAcceptanceChecksAsync(this)));
+        panel.addView(button("Open hedgeyos logs", v -> showHedgeyosLogs()));
+        panel.addView(button("Open hedgeyos terminal", v -> openHedgeyosTerminal()));
+        panel.addView(button("Run Debian APT Check", v -> HedgeyosRuntimeManager.runDebianAcceptanceChecksAsync(this)));
         panel.addView(button("Android Apps", v -> showAndroidApps()));
         panel.addView(button("Android Settings", v -> startActivity(new Intent(Settings.ACTION_SETTINGS))));
         panel.addView(button("Choose Home App", v -> requestHomeRole()));
 
-        return scrollView;
+        return frame;
     }
 
     private Button button(String label, View.OnClickListener listener) {
@@ -140,7 +163,7 @@ public final class PanixHomeActivity extends Activity {
         if (status == null) {
             return;
         }
-        PanixRuntimeManager.RuntimeStatus runtimeStatus = PanixRuntimeManager.getStatus(this);
+        HedgeyosRuntimeManager.RuntimeStatus runtimeStatus = HedgeyosRuntimeManager.getStatus(this);
         String worker = runtimeStatus.workerRunning ? " working" : "";
         status.setText("Runtime: " + runtimeStatus.state + worker + "\n" + runtimeStatus.detail);
     }
@@ -155,18 +178,18 @@ public final class PanixHomeActivity extends Activity {
 
     private GradientDrawable buttonBackground() {
         GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(Color.rgb(29, 38, 49));
+        drawable.setColor(Color.argb(238, 67, 51, 40));
         drawable.setCornerRadius(dp(6));
         drawable.setStroke(dp(1), ACCENT_COLOR);
         return drawable;
     }
 
-    private void openPanixTerminal() {
-        PanixRuntimeManager.openDebianTerminalAsync(this);
+    private void openHedgeyosTerminal() {
+        HedgeyosRuntimeManager.openDebianTerminalAsync(this);
     }
 
     private void openX11Surface() {
-        if (!PanixX11Bridge.isAvailable(this)) {
+        if (!HedgeyosX11Bridge.isAvailable(this)) {
             new AlertDialog.Builder(this)
                 .setTitle("X11 Surface")
                 .setMessage("This build does not include the embedded Termux:X11 module.")
@@ -174,21 +197,21 @@ public final class PanixHomeActivity extends Activity {
                 .show();
             return;
         }
-        PanixX11Bridge.openSurface(this);
+        HedgeyosX11Bridge.openSurface(this);
     }
 
     private void confirmResetDebian() {
         new AlertDialog.Builder(this)
             .setTitle("Reset Debian")
-            .setMessage("Delete the installed Debian rootfs and keep the Panix export directory?")
+            .setMessage("Delete the installed Debian rootfs and keep the hedgeyos export directory?")
             .setNegativeButton("Cancel", null)
-            .setPositiveButton("Reset", (dialog, which) -> PanixRuntimeService.requestResetDebian(this))
+            .setPositiveButton("Reset", (dialog, which) -> HedgeyosRuntimeService.requestResetDebian(this))
             .show();
     }
 
-    private void showPanixLogs() {
+    private void showHedgeyosLogs() {
         TextView logText = new TextView(this);
-        logText.setText(PanixRuntimeManager.readRecentLogs(this));
+        logText.setText(HedgeyosRuntimeManager.readRecentLogs(this));
         logText.setTextIsSelectable(true);
         logText.setTextSize(12);
         int padding = dp(16);
@@ -198,7 +221,7 @@ public final class PanixHomeActivity extends Activity {
         scrollView.addView(logText);
 
         new AlertDialog.Builder(this)
-            .setTitle("Panix Logs")
+            .setTitle("hedgeyos logs")
             .setView(scrollView)
             .setPositiveButton("Close", null)
             .show();

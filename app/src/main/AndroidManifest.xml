@@ -50,8 +50,8 @@
         tools:targetApi="m">
 
         <activity
-            android:name=".app.PanixHomeActivity"
-            android:enabled="${PANIX_FALLBACK_HOME_ENABLED}"
+            android:name=".app.HedgeyosHomeActivity"
+            android:enabled="${HEDGEYOS_FALLBACK_HOME_ENABLED}"
             android:exported="true"
             android:configChanges="fontScale|orientation|screenSize|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|screenLayout|touchscreen|uiMode|smallestScreenSize|density"
             android:label="@string/application_name"
@@ -78,8 +78,8 @@
         </activity>
 
         <activity
-            android:name="com.termux.x11.PanixHomeActivity"
-            android:enabled="${PANIX_X11_HOME_ENABLED}"
+            android:name="com.termux.x11.HedgeyosHomeActivity"
+            android:enabled="${HEDGEYOS_X11_HOME_ENABLED}"
             android:exported="true"
             android:configChanges="fontScale|orientation|screenSize|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|screenLayout|touchscreen|uiMode|smallestScreenSize|density"
             android:label="@string/application_name"
@@ -245,7 +245,7 @@
             android:exported="false" />
 
         <service
-            android:name=".app.PanixRuntimeService"
+            android:name=".app.HedgeyosRuntimeService"
             android:exported="false" />
 
         <service
