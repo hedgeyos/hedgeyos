@@ -313,7 +313,7 @@ public final class HedgeyosRuntimeManager {
         command.add("--kill-on-exit");
         command.add("--sysvipc");
         command.add("--ashmem-memfd");
-        command.add("--change-id=1000:1000");
+        command.add("--change-id=0:0");
         command.add("--bind=/dev");
         command.add("--bind=/proc");
         command.add("--bind=/sys");
@@ -324,8 +324,8 @@ public final class HedgeyosRuntimeManager {
         command.add("/usr/bin/env");
         command.add("-i");
         command.add("HOME=/home/hedgeyos");
-        command.add("USER=hedgeyos");
-        command.add("LOGNAME=hedgeyos");
+        command.add("USER=root");
+        command.add("LOGNAME=root");
         command.add("SHELL=/bin/bash");
         command.add("DISPLAY=" + HedgeyosX11Bridge.DISPLAY);
         command.add("LANG=C.UTF-8");
@@ -472,6 +472,11 @@ public final class HedgeyosRuntimeManager {
 
         List<String> command = buildDebianRootCommand(context,
             "set -e; " +
+                "echo '== privilege model =='; " +
+                "id; " +
+                "test \"$(id -u)\" = 0; " +
+                "test \"$(stat -c %u /etc/sudo.conf)\" = 0; " +
+                "sudo -n true; " +
                 "echo '== os-release =='; cat /etc/os-release; " +
                 "echo '== apt update =='; apt update; " +
                 "echo '== apt install hello =='; env DEBIAN_FRONTEND=noninteractive apt install -y hello; " +
@@ -504,7 +509,7 @@ public final class HedgeyosRuntimeManager {
     }
 
     private static List<String> buildDebianCommand(Context context, String shellCommand) {
-        return buildDebianCommand(context, shellCommand, "1000:1000", "/home/hedgeyos", "hedgeyos");
+        return buildDebianCommand(context, shellCommand, "0:0", "/home/hedgeyos", "root");
     }
 
     private static List<String> buildDebianRootCommand(Context context, String shellCommand) {

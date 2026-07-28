@@ -40,7 +40,7 @@ exec "$HEDGEYOS_PREFIX_DIR/bin/proot" \
     --kill-on-exit \
     --sysvipc \
     --ashmem-memfd \
-    --change-id=1000:1000 \
+    --change-id=0:0 \
     --bind=/dev \
     --bind=/proc \
     --bind=/sys \
@@ -48,7 +48,7 @@ exec "$HEDGEYOS_PREFIX_DIR/bin/proot" \
     --bind="$HEDGEYOS_FILES_DIR/export:/home/hedgeyos/Downloads" \
     --cwd=/home/hedgeyos \
     /usr/bin/env -i \
-    HOME="$HOME" USER="$USER" LOGNAME="$LOGNAME" SHELL="$SHELL" \
+    HOME="$HOME" USER=root LOGNAME=root SHELL="$SHELL" \
     DISPLAY="$DISPLAY" LANG="$LANG" TMPDIR="$TMPDIR" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
     PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin \
     /bin/bash -lc 'mkdir -p "$XDG_RUNTIME_DIR" /home/hedgeyos/Downloads && chmod 700 "$XDG_RUNTIME_DIR" && dbus-launch --exit-with-session startxfce4' \

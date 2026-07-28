@@ -12,7 +12,8 @@ ROOTFS="${1:-}"
     exit 1
 }
 
-install -d "$ROOTFS/home/hedgeyos" "$ROOTFS/etc/sudoers.d" "$ROOTFS/etc/apt/sources.list.d"
+install -d -o 1000 -g 1000 "$ROOTFS/home/hedgeyos"
+install -d "$ROOTFS/etc/sudoers.d" "$ROOTFS/etc/apt/sources.list.d"
 
 grep -q '^hedgeyos:' "$ROOTFS/etc/group" || printf 'hedgeyos:x:1000:\n' >> "$ROOTFS/etc/group"
 grep -q '^hedgeyos:' "$ROOTFS/etc/passwd" || printf 'hedgeyos:x:1000:1000:hedgeyos User:/home/hedgeyos:/bin/bash\n' >> "$ROOTFS/etc/passwd"
@@ -27,6 +28,9 @@ cat > "$ROOTFS/etc/sudoers.d/hedgeyos" <<'EOF'
 hedgeyos ALL=(ALL) NOPASSWD:ALL
 EOF
 chmod 0440 "$ROOTFS/etc/sudoers.d/hedgeyos"
+chmod 0440 "$ROOTFS/etc/sudoers"
+chmod 0644 "$ROOTFS/etc/sudo.conf"
+chmod 4755 "$ROOTFS/usr/bin/sudo"
 
 rm -rf "$ROOTFS/var/cache/apt/archives"/*.deb \
        "$ROOTFS/var/lib/apt/lists"/* \

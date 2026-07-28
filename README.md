@@ -9,13 +9,13 @@ device smoke-test evidence on an attached ARM64 phone. The alpha boots into the
 bundled Debian 13/XFCE desktop as the Android Home screen, starts embedded
 Termux:X11 from inside the hedgeyos APK, opens Debian desktop apps, exposes the
 hedgeyos recovery menu, and applies the hedgeyos wallpaper/icon branding on the
-Android and Linux sides.
+Android and Linux sides. On-device acceptance now also covers `sudo`, `apt update`,
+and installation and execution of a Debian package.
 
 This is still an alpha. Final `v0.1.0` has not been tagged: before that, the
 remaining release gate is a broader acceptance pass with production signing,
-direct Reset Debian evidence, APT install checks, and final Linux-side rename
-verification. See [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md) for the current
-evidence.
+direct Reset Debian evidence, and final release checks. See
+[`docs/TEST-REPORT.md`](docs/TEST-REPORT.md) for the current evidence.
 
 ## What hedgeyos Is
 
@@ -34,11 +34,11 @@ hedgeyos is not affiliated with, endorsed by, or released by the Termux project.
 
 Published alpha.1 artifact details:
 
-- Test-signed APK size: 262,630,388 bytes.
-- Bundled Debian rootfs size: 221,480,599 bytes compressed.
+- Test-signed APK size: 261,786,612 bytes.
+- Bundled Debian rootfs size: 221,490,296 bytes compressed.
 - Bundled PRoot payload size: 114,325 bytes compressed.
 - APK SHA-256:
-  `464bb857c8bcf410953535caddde2d82d985f5281c17d65031eca1881adfc91a`.
+  `54ee061dd9c1f9105e4aeb9f3ad84422ff8451ac9fb42887688d6904ad12a194`.
 - Test signing certificate SHA-256:
   `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`.
 
@@ -75,10 +75,9 @@ This is full Debian 13 Trixie on the phone: XFCE, Thunar, xfce4-terminal, the
 Debian filesystem, and ordinary Debian APT sources run inside the bundled PRoot
 rootfs.
 
-Alpha note: the current captured terminal still shows a legacy
-`panix@localhost` shell prompt from the pre-rename rootfs. Treat that as a
-pre-`v0.1.0` cleanup item; the project, repository, Android package, and release
-identity are hedgeyos.
+The older demo capture shows a legacy `panix@localhost` prompt from the
+pre-rename test rootfs. The current downloadable APK contains only the
+`hedgeyos` Debian account and opens terminals as `root@localhost`.
 
 ## Recovery
 
@@ -103,12 +102,14 @@ The bundled rootfs is Debian 13 Trixie with ordinary Debian APT sources for
 Trixie, Trixie updates, and Debian security. Normal commands such as `apt
 update`, `apt install git`, `python3`, and `gcc` are intended to work inside the
 Debian environment. The current alpha can run the Debian acceptance check from
-the hedgeyos menu; final `v0.1.0` should rerun and record a full APT acceptance
-pass against the exact release artifact.
+the hedgeyos menu. On the attached ARM64 phone, that check completed `apt update`,
+installed `hello`, ran it, and verified the installed dpkg record.
 
-The rootfs runs under unprivileged PRoot, not root, a VM, or a container with its
-own kernel. PRoot has compatibility limits around privileged operations, kernel
-features, daemons, and filesystem semantics.
+The rootfs runs under unprivileged PRoot, not Android root, a VM, or a container
+with its own kernel. Debian processes use PRoot's fake-root identity so package
+management works inside the rootfs without granting privileges over Android.
+PRoot still has compatibility limits around kernel features, daemons, and
+filesystem semantics.
 
 ## Build
 

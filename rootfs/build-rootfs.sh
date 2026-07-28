@@ -11,6 +11,7 @@ ROOTFS_TREE="$OUT_DIR/debian-trixie-arm64-rootfs"
 ROOTFS_TAR="$OUT_DIR/debian-trixie-arm64-rootfs.tar"
 ROOTFS_TMP="$ROOTFS_OUT.tmp"
 APT_SNAPSHOT="${APT_SNAPSHOT:-}"
+DEBIAN_KEYRING="${DEBIAN_KEYRING:-/usr/share/keyrings/debian-archive-keyring.gpg}"
 
 PACKAGES="bash,coreutils,apt,ca-certificates,sudo,curl,wget,git,nano,less,procps,psmisc,iproute2,python3,build-essential,dbus,dbus-x11,xfce4,xfce4-terminal,thunar,xterm,fonts-dejavu,adwaita-icon-theme"
 
@@ -30,6 +31,8 @@ fail() {
     exit 1
 }
 
+[ "$(id -u)" -eq 0 ] || fail "run as root so Debian ownership metadata can be preserved"
+
 mkdir -p "$OUT_DIR" "$MANIFEST_DIR"
 
 PRIMARY_SOURCE="deb http://deb.debian.org/debian trixie main"
@@ -42,10 +45,9 @@ if [ -n "$APT_SNAPSHOT" ]; then
     SECURITY_SOURCE=
 fi
 
-KEYRING_ARG=
-if [ -r /usr/share/keyrings/debian-archive-keyring.gpg ]; then
-    KEYRING_ARG=--keyring=/usr/share/keyrings/debian-archive-keyring.gpg
-fi
+[ -r "$DEBIAN_KEYRING" ] || fail "Debian archive keyring is not readable: $DEBIAN_KEYRING"
+KEYRING_ARG="--keyring=$DEBIAN_KEYRING"
+DEBIAN_KEYRING_SHA256=$(sha256sum "$DEBIAN_KEYRING" | awk '{ print $1 }')
 
 cleanup() {
     rm -rf "$ROOTFS_TREE" "$ROOTFS_TAR" "$ROOTFS_TMP"
@@ -83,7 +85,25 @@ fi
 "$SCRIPT_DIR/configure-rootfs.sh" "$ROOTFS_TREE"
 mkdir -p "$ROOTFS_TREE/dev" "$ROOTFS_TREE/proc" "$ROOTFS_TREE/sys"
 
+chown -R 0:0 "$ROOTFS_TREE"
+chown -R 1000:1000 "$ROOTFS_TREE/home/hedgeyos"
+chmod 4755 "$ROOTFS_TREE/usr/bin/sudo"
 tar --numeric-owner --hard-dereference --exclude='./dev/*' -C "$ROOTFS_TREE" -cf "$ROOTFS_TAR" .
+
+for root_owned_path in ./etc/sudo.conf ./etc/sudoers ./usr/bin/sudo ./var/lib/dpkg/status; do
+    archived_owner=$(tar --numeric-owner -tvf "$ROOTFS_TAR" "$root_owned_path" | awk 'NR == 1 { print $2 }')
+    [ "$archived_owner" = "0/0" ] ||
+        fail "$root_owned_path is archived as $archived_owner instead of 0/0"
+done
+
+sudo_mode=$(tar --numeric-owner -tvf "$ROOTFS_TAR" ./usr/bin/sudo | awk 'NR == 1 { print $1 }')
+[ "$sudo_mode" = "-rwsr-xr-x" ] ||
+    fail "./usr/bin/sudo is archived with mode $sudo_mode instead of -rwsr-xr-x"
+
+home_owner=$(tar --numeric-owner -tvf "$ROOTFS_TAR" ./home/hedgeyos/ | awk 'NR == 1 { print $2 }')
+[ "$home_owner" = "1000/1000" ] ||
+    fail "./home/hedgeyos is archived as $home_owner instead of 1000/1000"
+
 zstd -19 -T0 -f "$ROOTFS_TAR" -o "$ROOTFS_TMP"
 
 archive_size=$(wc -c < "$ROOTFS_TMP" | tr -d ' ')
@@ -103,6 +123,7 @@ build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 primary_source=$PRIMARY_SOURCE
 updates_source=$UPDATES_SOURCE
 security_source=$SECURITY_SOURCE
+debian_keyring_sha256=$DEBIAN_KEYRING_SHA256
 packages=$PACKAGES
 android_extractable=true
 archive_excludes=./dev/*

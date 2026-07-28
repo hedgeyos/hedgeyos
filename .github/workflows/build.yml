@@ -32,11 +32,24 @@ jobs:
       - name: Install rootfs build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mmdebstrap zstd qemu-user-static binfmt-support ca-certificates debian-archive-keyring bison
+          sudo apt-get install -y mmdebstrap zstd qemu-user-static binfmt-support ca-certificates curl bison
+
+      - name: Fetch Debian archive keyring
+        run: |
+          mkdir -p build/debian-keyring
+          curl -fsSL \
+            https://deb.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2025.1_all.deb \
+            -o build/debian-keyring.deb
+          echo "9ea7778e443144ca490668737a8ab22dd3e748bb99e805e22ec055abeb3c7fac  build/debian-keyring.deb" |
+            sha256sum -c -
+          dpkg-deb -x build/debian-keyring.deb build/debian-keyring
 
       - name: Build Debian rootfs
         run: |
-          sudo env OUT_DIR="$PWD/build/rootfs" ./rootfs/build-rootfs.sh
+          sudo env \
+            OUT_DIR="$PWD/build/rootfs" \
+            DEBIAN_KEYRING="$PWD/build/debian-keyring/usr/share/keyrings/debian-archive-keyring.gpg" \
+            ./rootfs/build-rootfs.sh
           sudo chown -R "$USER:$USER" build rootfs/manifests
           mkdir -p app/src/main/assets
           cp build/rootfs/debian-trixie-arm64-rootfs.tar.zst app/src/main/assets/
