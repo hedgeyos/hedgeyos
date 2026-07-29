@@ -640,6 +640,8 @@ public final class HedgeyosRuntimeManager {
             "etc/xdg/autostart/hedgeyos-window-rules.desktop", 0644);
         installLinuxRuntimeAsset(context, rootfs, "hedgeyos-window-rules.lua",
             "etc/hedgeyos/devilspie2/hedgeyos-window-rules.lua", 0644);
+        installLinuxRuntimeAsset(context, rootfs, "hedgeyos-menu.png",
+            "usr/share/hedgeyos/hedgeyos-menu.png", 0644);
         installLinuxRuntimeAsset(context, rootfs, "Terminal.desktop",
             "usr/share/hedgeyos/defaults/Terminal.desktop", 0644);
         installLinuxRuntimeAsset(context, rootfs, "terminalrc",

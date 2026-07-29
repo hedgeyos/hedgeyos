@@ -45,7 +45,7 @@ final class HedgeyosOverlayController {
     private static final String PREFS_NAME = "hedgeyos_overlay";
     private static final String KEY_X = "normalized_x";
     private static final String KEY_Y = "normalized_y";
-    private static final int HEDGEHOG_SIZE_DP = 48;
+    private static final int HEDGEHOG_SIZE_DP = 96;
     private static final int EDGE_MARGIN_DP = 8;
 
     private final Activity activity;

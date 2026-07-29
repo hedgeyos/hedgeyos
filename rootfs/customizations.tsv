@@ -2,6 +2,7 @@
 hedgeyos-linux/hedgeyos-apply-defaults	/usr/local/libexec/hedgeyos-apply-defaults	0:0	0755	replace-system
 hedgeyos-linux/hedgeyos-window-rules.desktop	/etc/xdg/autostart/hedgeyos-window-rules.desktop	0:0	0644	replace-system
 hedgeyos-linux/hedgeyos-window-rules.lua	/etc/hedgeyos/devilspie2/hedgeyos-window-rules.lua	0:0	0644	replace-system
+hedgeyos-linux/hedgeyos-menu.png	/usr/share/hedgeyos/hedgeyos-menu.png	0:0	0644	replace-system
 hedgeyos-linux/xfce4-desktop.xml	/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml	0:0	0644	seed-home
 hedgeyos-linux/xfwm4.xml	/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml	0:0	0644	seed-home
 hedgeyos-linux/xsettings.xml	/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml	0:0	0644	seed-home

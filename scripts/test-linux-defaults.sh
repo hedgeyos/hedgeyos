@@ -31,6 +31,20 @@ EOF
 cat > "$FAKE_BIN/xfconf-query" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$*" >> "$XFCONF_LOG"
+case "$*" in
+    "-c xfce4-panel -p /plugins -l")
+        printf '%s\n' \
+            "/plugins/plugin-1" \
+            "/plugins/plugin-1/button-title" \
+            "/plugins/plugin-2"
+        ;;
+    "-c xfce4-panel -p /plugins/plugin-1")
+        printf '%s\n' "applicationsmenu"
+        ;;
+    "-c xfce4-panel -p /plugins/plugin-2")
+        printf '%s\n' "clock"
+        ;;
+esac
 EOF
 chmod 0755 "$FAKE_BIN/xfconf-query"
 
@@ -40,13 +54,16 @@ HEDGEYOS_DEFAULTS_DIR="$DEFAULTS_DIR" \
 PATH="$FAKE_BIN:$PATH" \
     "$ASSET_DIR/hedgeyos-apply-defaults"
 
-test "$(cat "$HOME_DIR/.config/hedgeyos/defaults-version")" = "1"
+test "$(cat "$HOME_DIR/.config/hedgeyos/defaults-version")" = "2"
 test -x "$HOME_DIR/Desktop/Terminal.desktop"
 test ! -e "$HOME_DIR/Desktop/hedgeyos.desktop"
 test -f "$HOME_DIR/Desktop/keep-me.txt"
 grep -Fq "MiscDefaultGeometry=72x22" "$HOME_DIR/.config/xfce4/terminal/terminalrc"
 grep -Fq "/general/button_layout -n -t string -s CMHO|" "$XFCONF_LOG"
+grep -Fq "/desktop-icons/single-click -n -t bool -s true" "$XFCONF_LOG"
 grep -Fq "/desktop-icons/file-icons/show-home -n -t bool -s false" "$XFCONF_LOG"
+grep -Fq "/plugins/plugin-1/button-icon -n -t string -s /usr/share/hedgeyos/hedgeyos-menu.png" "$XFCONF_LOG"
+grep -Fq "/plugins/plugin-1/show-button-title -n -t bool -s false" "$XFCONF_LOG"
 
 first_log_sha=$(sha256sum "$XFCONF_LOG" | awk '{print $1}')
 HEDGEYOS_HOME="$HOME_DIR" \

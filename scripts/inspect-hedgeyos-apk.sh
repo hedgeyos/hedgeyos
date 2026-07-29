@@ -124,6 +124,8 @@ contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-window-rule
     fail "APK does not contain Linux window-rule autostart"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-window-rules.lua" ||
     fail "APK does not contain Linux portrait window rules"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-menu.png" ||
+    fail "APK does not contain the hedgeyos XFCE menu icon"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/packages/devilspie2_" ||
     fail "APK does not contain the offline devilspie2 migration package"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/packages/liblua5.1-0_" ||
@@ -169,6 +171,7 @@ fi
     printf 'embedded_x11=lib/arm64-v8a/libXlorie.so\n'
     printf 'power_protection=wake_lock_and_battery_setup\n'
     printf 'overlay_asset=drawable/hedgeyos_companion\n'
+    printf 'linux_menu_icon=assets/hedgeyos-linux/hedgeyos-menu.png\n'
     printf 'linux_defaults=assets/hedgeyos-linux/hedgeyos-apply-defaults\n'
     printf 'vnc_files=absent_in_apk_listing\n'
 } > "$OUT_DIR/summary.properties"

@@ -1,9 +1,10 @@
 #!/bin/sh
 set -eu
 
-DEFAULTS_VERSION=1
+DEFAULTS_VERSION=2
 HEDGEYOS_HOME="${HEDGEYOS_HOME:-${HOME:-/home/hedgeyos}}"
 DEFAULTS_DIR="${HEDGEYOS_DEFAULTS_DIR:-/usr/share/hedgeyos/defaults}"
+MENU_ICON="${HEDGEYOS_MENU_ICON:-/usr/share/hedgeyos/hedgeyos-menu.png}"
 MARKER_DIR="$HEDGEYOS_HOME/.config/hedgeyos"
 MARKER="$MARKER_DIR/defaults-version"
 DESKTOP_DIR="$HEDGEYOS_HOME/Desktop"
@@ -27,10 +28,22 @@ xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false || true
 xfconf-query -c xfce4-session -p /general/SaveOnExit -n -t bool -s false || true
 
 xfconf-query -c xfce4-desktop -p /desktop-icons/style -n -t int -s 2 || true
+xfconf-query -c xfce4-desktop -p /desktop-icons/single-click -n -t bool -s true || true
 xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-home -n -t bool -s false || true
 xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-filesystem -n -t bool -s false || true
 xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-trash -n -t bool -s false || true
 xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-removable -n -t bool -s false || true
+
+panel_plugins=$(
+    xfconf-query -c xfce4-panel -p /plugins -l 2>/dev/null |
+        sed -n '/^\/plugins\/plugin-[0-9][0-9]*$/p'
+)
+for plugin in $panel_plugins; do
+    plugin_type=$(xfconf-query -c xfce4-panel -p "$plugin" 2>/dev/null || true)
+    [ "$plugin_type" = "applicationsmenu" ] || continue
+    xfconf-query -c xfce4-panel -p "$plugin/button-icon" -n -t string -s "$MENU_ICON" || true
+    xfconf-query -c xfce4-panel -p "$plugin/show-button-title" -n -t bool -s false || true
+done
 
 terminal_config="$HEDGEYOS_HOME/.config/xfce4/terminal/terminalrc"
 mkdir -p "$(dirname "$terminal_config")"
