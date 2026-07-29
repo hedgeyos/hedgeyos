@@ -72,11 +72,10 @@ the architecture:
 - Phone-local X11 builds are blocked because the Android SDK/NDK tools used by
   the Termux:X11 module are Linux x86_64 host binaries. Build X11-enabled
   release artifacts on a normal Linux workstation or GitHub Actions.
-- The pinned Termux `proot` package moved from `5.1.107.86` to `5.1.107.87` in
-  the rolling Termux repository, causing a CI 404. The builder now pins
-  `5.1.107.87`, but the release process should still consider mirroring exact
-  package inputs or moving to a reproducible cache so old releases remain
-  rebuildable.
+- The rolling Termux repository repeatedly removed pinned `proot` package URLs,
+  causing CI 404s. The 114 KiB verified PRoot payload and its checksum are now
+  committed, so normal builds no longer depend on those moving package URLs.
+  `scripts/build-proot-payload.sh` remains the explicit maintainer refresh path.
 - `aapt dump badging` lists disabled launcher candidates. The CI inspection
   script now validates the relevant manifest activity blocks directly.
 - `v0.1.0-alpha.2` currently uses `versionCode 2`. Future prereleases must bump

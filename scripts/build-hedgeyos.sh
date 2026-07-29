@@ -26,7 +26,7 @@ ROOTFS_SHA_FILE="$REPO_ROOT/rootfs/manifests/debian-trixie-arm64-rootfs.tar.zst.
 PROOT_NAME="termux-proot-aarch64.tar.zst"
 PROOT_ASSET="$REPO_ROOT/app/src/main/assets/$PROOT_NAME"
 PROOT_ASSET_SHA="$PROOT_ASSET.sha256"
-PROOT_SHA_FILE="$REPO_ROOT/rootfs/manifests/$PROOT_NAME.sha256"
+PROOT_BUILD_SHA_FILE="$REPO_ROOT/rootfs/manifests/$PROOT_NAME.sha256"
 X11_CPP_DIR="$REPO_ROOT/third_party/termux-x11/lorie/src/main/cpp"
 
 mkdir -p "$BUILD_LOG_DIR"
@@ -48,7 +48,7 @@ refresh_proot_asset() {
     "$SCRIPT_DIR/build-proot-payload.sh"
     mkdir -p "$(dirname "$PROOT_ASSET")"
     cp "$REPO_ROOT/build/proot/$PROOT_NAME" "$PROOT_ASSET"
-    cp "$PROOT_SHA_FILE" "$PROOT_ASSET_SHA"
+    cp "$PROOT_BUILD_SHA_FILE" "$PROOT_ASSET_SHA"
 }
 
 require_exec "$GRADLE_BIN" "Gradle"
@@ -74,14 +74,11 @@ if [ ! -e "$ROOTFS_ASSET" ] && [ -e "$REPO_ROOT/build/rootfs/$ROOTFS_NAME" ]; th
     cp "$REPO_ROOT/build/rootfs/$ROOTFS_NAME" "$ROOTFS_ASSET"
 fi
 
-if [ ! -e "$PROOT_ASSET" ] || [ ! -e "$PROOT_ASSET_SHA" ] || [ ! -e "$PROOT_SHA_FILE" ]; then
-    refresh_proot_asset
-elif [ "$(sha256sum "$PROOT_ASSET" | cut -d ' ' -f 1)" != "$(cut -d ' ' -f 1 "$PROOT_SHA_FILE")" ]; then
+if [ "${HEDGEYOS_REBUILD_PROOT_PAYLOAD:-0}" = 1 ]; then
     refresh_proot_asset
 fi
 
 require_file "$PROOT_ASSET" "bundled PRoot payload asset"
-require_file "$PROOT_SHA_FILE" "bundled PRoot payload checksum"
 require_file "$PROOT_ASSET_SHA" "bundled PRoot payload checksum asset"
 
 require_file "$ROOTFS_ASSET" "bundled Debian rootfs asset"
@@ -101,7 +98,7 @@ if [ "$expected_rootfs_sha" != "$actual_rootfs_sha" ]; then
     fail "rootfs checksum verification failed"
 fi
 
-expected_proot_sha=$(cut -d ' ' -f 1 "$PROOT_SHA_FILE")
+expected_proot_sha=$(cut -d ' ' -f 1 "$PROOT_ASSET_SHA")
 actual_proot_sha=$(sha256sum "$PROOT_ASSET" | cut -d ' ' -f 1)
 if [ "$expected_proot_sha" != "$actual_proot_sha" ]; then
     fail "PRoot payload checksum verification failed"

@@ -225,6 +225,12 @@ three pre-existing Termux `PendingIntent` lint warnings, and Java 8 target
 deprecation warnings under JDK 21. Lint reported zero errors. `shellcheck` was
 not installed on the host.
 
+The first post-push full build exposed a 404 after the rolling Termux repository
+removed the pinned `proot` package. Normal builds now verify the exact 114 KiB
+PRoot payload and checksum committed with the source, eliminating that moving
+network dependency. Package downloads remain only in the explicit maintainer
+refresh path.
+
 ## Release Decision
 
 `v0.1.0-alpha.2` is suitable as a public prerelease/test APK. Final `v0.1.0`

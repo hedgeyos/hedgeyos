@@ -43,8 +43,11 @@ The full package manifest and Android-extractable archive notes are recorded in
 
 ## Termux PRoot Payload Pin
 
-`scripts/build-proot-payload.sh` builds `termux-proot-aarch64.tar.zst` from the
-Termux main repository and verifies these package hashes before unpacking:
+The committed `termux-proot-aarch64.tar.zst` release payload was built from the
+following verified Termux packages. It is kept in the repository because the
+Termux binary repository is rolling and removed the exact `proot` URL after the
+alpha.2 build. `scripts/build-proot-payload.sh` is the explicit refresh path for
+new payload versions.
 
 | Package | Version | Termux repository path | SHA-256 |
 | --- | --- | --- | --- |

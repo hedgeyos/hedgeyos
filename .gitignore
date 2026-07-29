@@ -12,8 +12,6 @@ release/
 *.zip
 app/src/main/assets/debian-trixie-arm64-rootfs.tar.zst
 app/src/main/assets/debian-trixie-arm64-rootfs.tar.zst.sha256
-app/src/main/assets/termux-proot-aarch64.tar.zst
-app/src/main/assets/termux-proot-aarch64.tar.zst.sha256
 rootfs/manifests/*.sha256
 rootfs/manifests/*.provenance
 !rootfs/manifests/.gitkeep

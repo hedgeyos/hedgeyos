@@ -62,11 +62,10 @@ jobs:
             rootfs/manifests/debian-trixie-arm64-rootfs.provenance \
             build/hedgeyos-rootfs-inspection
 
-      - name: Build PRoot payload
+      - name: Verify pinned PRoot payload
         run: |
-          ./scripts/build-proot-payload.sh
-          cp build/proot/termux-proot-aarch64.tar.zst app/src/main/assets/
-          cp rootfs/manifests/termux-proot-aarch64.tar.zst.sha256 app/src/main/assets/
+          cd app/src/main/assets
+          sha256sum -c termux-proot-aarch64.tar.zst.sha256
 
       - name: Build unsigned ARM64 APK
         env:

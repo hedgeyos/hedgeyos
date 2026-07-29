@@ -11,7 +11,7 @@ PAYLOAD_TMP="$PAYLOAD_OUT.tmp"
 TERMUX_REPO_URL="${TERMUX_REPO_URL:-https://packages.termux.dev/apt/termux-main}"
 
 PACKAGES="
-proot 5.1.107.87 pool/main/p/proot/proot_5.1.107.87_aarch64.deb c978bbe7161a639349a2e369d3d134e35d234f5b846432182a5c9bffadb606a6
+proot 5.1.107.88 pool/main/p/proot/proot_5.1.107.88_aarch64.deb f83bbf9029540f3f7c4ff1fa5624621f7d0a477fc910f7c8cca7daffb84f17ef
 libandroid-shmem 0.7 pool/main/liba/libandroid-shmem/libandroid-shmem_0.7_aarch64.deb 0da3a24d558b93c92bcf8d611e0826a99ff96e396b148e6cdf33b47c47c57ff6
 libtalloc 2.4.3 pool/main/libt/libtalloc/libtalloc_2.4.3_aarch64.deb ac81ad623d74c209718b9f3acb2dd702cc8a88c431e820d212229910b4db29da
 "

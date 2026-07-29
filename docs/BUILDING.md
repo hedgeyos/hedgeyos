@@ -30,19 +30,19 @@ The script currently verifies:
 - The bundled Debian rootfs asset and checksum.
 - The bundled rootfs checksum is copied into APK assets beside the rootfs so
   Android first boot can verify the asset.
-- A pinned Termux PRoot payload built from verified `proot` 5.1.107.87,
-  `libandroid-shmem`, and `libtalloc` package files.
-- The bundled PRoot payload checksum is copied into APK assets beside the
-  payload so Android first boot can verify it.
+- The repository-pinned Termux PRoot payload and adjacent SHA-256 checksum.
+- Android first boot verifies that checksum before extracting the payload.
 - The expected release APK filename, `hedgeyos-arm64-v8a.apk`.
 
 Current local blocker:
 
 - The Debian rootfs asset is built and bundled by GitHub Actions. Local phone
   release builds still need the rootfs asset under `build/rootfs/` or
-  `app/src/main/assets/` before `./scripts/build-hedgeyos.sh` can package it. The
-  PRoot payload is small enough for `./scripts/build-hedgeyos.sh` to build locally
-  when missing.
+  `app/src/main/assets/` before `./scripts/build-hedgeyos.sh` can package it.
+- The verified PRoot payload is committed because the Termux package repository
+  is rolling and removes old package URLs. Explicit maintainers can refresh it
+  from current verified packages with
+  `HEDGEYOS_REBUILD_PROOT_PAYLOAD=1 ./scripts/build-hedgeyos.sh`.
 - Official SDK/NDK host tools are Linux x86_64, so hedgeyos's on-phone build path
   generates ARM64 JNI libraries with Termux `clang`/`clang++` and packages them
   from `jniLibs`. Conventional CI hosts can opt back into upstream `ndk-build`
@@ -70,7 +70,7 @@ GitHub Actions workflow:
 - `.github/workflows/build.yml` checks out submodules recursively.
 - `.github/workflows/build.yml` installs SDK 36, NDK 29, and CMake 3.22.1.
 - It builds the Debian rootfs on `ubuntu-latest`.
-- It builds the pinned Termux PRoot payload.
+- It verifies the repository-pinned Termux PRoot payload.
 - It builds an unsigned ARM64 CI APK with `HEDGEYOS_INCLUDE_X11_MODULE=1` and
   `HEDGEYOS_SIGN_RELEASE=0`.
 - It verifies the APK structure with `scripts/inspect-hedgeyos-apk.sh`, including
