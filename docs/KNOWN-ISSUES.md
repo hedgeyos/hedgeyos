@@ -2,6 +2,14 @@
 
 - `v0.1.0-alpha.4` is a published, test-signed prerelease. It is not the final
   `v0.1.0` production release.
+- Alpha.4 permanently enables Termux:X11 diagnostic logcat capture because it
+  exports presence-sensitive `TERMUX_X11_DEBUG=1` in every session. The current
+  development branch removes it from normal environments and provides an
+  explicit one-shot diagnostic action; this fix is not yet a published release.
+- Alpha.4's Debian rootfs omits `librsvg2-common`, so GTK cannot load many SVG
+  symbolic assets. The current development branch adds the standard Trixie
+  loader and an offline existing-rootfs migration; extended visual confirmation
+  remains pending human testing.
 - The alpha boot/restart gate passes on the attached ARM64 phone: hedgeyos
   installs, starts embedded X11, reaches XFCE with the panel/dock and `xfwm4`
   running, applies the hedgeyos wallpaper, and recovers after app
@@ -29,3 +37,7 @@
   be addressed before raising target SDK.
 - Gradle with JDK 21 emits Java 8 source/target deprecation warnings. The build
   still completes with the current toolchain.
+- These two fixes do not establish that every GUI performance issue is solved.
+  Remaining contributors can include PRoot syscall interception, Termux:X11
+  rendering, software OpenGL, Android scheduler/cpuset behavior, excessive X11
+  resolution, application workloads, and system-wide Android RAM/swap pressure.

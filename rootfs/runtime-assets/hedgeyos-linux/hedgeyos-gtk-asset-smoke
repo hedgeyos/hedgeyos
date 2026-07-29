@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+
+import ctypes
+import ctypes.util
+import glob
+import os
+import tempfile
+
+
+class GError(ctypes.Structure):
+    _fields_ = [
+        ("domain", ctypes.c_uint),
+        ("code", ctypes.c_int),
+        ("message", ctypes.c_char_p),
+    ]
+
+
+def require_one(pattern, label):
+    matches = sorted(glob.glob(pattern, recursive=True))
+    if not matches:
+        raise RuntimeError(f"{label} is missing")
+    return matches[0]
+
+
+def load_library(name):
+    path = ctypes.util.find_library(name)
+    if not path:
+        raise RuntimeError(f"shared library {name} is missing")
+    return ctypes.CDLL(path)
+
+
+gdk_pixbuf = load_library("gdk_pixbuf-2.0")
+gobject = load_library("gobject-2.0")
+glib = load_library("glib-2.0")
+
+gdk_pixbuf.gdk_pixbuf_new_from_file.argtypes = [
+    ctypes.c_char_p,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+gdk_pixbuf.gdk_pixbuf_new_from_file.restype = ctypes.c_void_p
+gdk_pixbuf.gdk_pixbuf_get_width.argtypes = [ctypes.c_void_p]
+gdk_pixbuf.gdk_pixbuf_get_width.restype = ctypes.c_int
+gdk_pixbuf.gdk_pixbuf_get_height.argtypes = [ctypes.c_void_p]
+gdk_pixbuf.gdk_pixbuf_get_height.restype = ctypes.c_int
+gobject.g_object_unref.argtypes = [ctypes.c_void_p]
+glib.g_error_free.argtypes = [ctypes.c_void_p]
+
+
+def decode(path, label):
+    error = ctypes.c_void_p()
+    pixbuf = gdk_pixbuf.gdk_pixbuf_new_from_file(
+        os.fsencode(path),
+        ctypes.byref(error),
+    )
+    if not pixbuf:
+        message = "unknown GDK-Pixbuf error"
+        if error.value:
+            gerror = ctypes.cast(error, ctypes.POINTER(GError)).contents
+            if gerror.message:
+                message = gerror.message.decode("utf-8", "replace")
+            glib.g_error_free(error)
+        raise RuntimeError(f"{label} decode failed: {message}")
+    try:
+        width = gdk_pixbuf.gdk_pixbuf_get_width(pixbuf)
+        height = gdk_pixbuf.gdk_pixbuf_get_height(pixbuf)
+        if width <= 0 or height <= 0:
+            raise RuntimeError(f"{label} decoded with invalid dimensions")
+        print(f"{label}=PASS path={path} size={width}x{height}")
+    finally:
+        gobject.g_object_unref(pixbuf)
+
+
+loader = require_one(
+    "/usr/lib/*/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader_svg.so",
+    "GTK SVG loader",
+)
+cache = require_one(
+    "/usr/lib/*/gdk-pixbuf-2.0/2.10.0/loaders.cache",
+    "GDK-Pixbuf loader cache",
+)
+with open(cache, "r", encoding="utf-8", errors="replace") as stream:
+    cache_text = stream.read()
+if "libpixbufloader_svg.so" not in cache_text or '"svg"' not in cache_text:
+    raise RuntimeError(f"SVG loader entry is absent from {cache}")
+
+print(f"gtk_svg_loader=PASS path={loader}")
+print(f"gtk_svg_cache=PASS path={cache}")
+
+test_svg = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8">'
+    '<rect width="8" height="8" fill="#2f7d50"/>'
+    '<path d="M1 4l2 2 4-4" fill="none" stroke="#ffffff"/>'
+    "</svg>"
+)
+with tempfile.NamedTemporaryFile(
+    mode="w",
+    encoding="ascii",
+    suffix=".svg",
+    delete=False,
+) as stream:
+    stream.write(test_svg)
+    test_svg_path = stream.name
+
+try:
+    decode(test_svg_path, "gtk_svg_decode")
+finally:
+    os.unlink(test_svg_path)
+
+symbolic_icon = require_one(
+    "/usr/share/icons/Adwaita/**/document-open-symbolic.svg",
+    "Adwaita symbolic SVG icon",
+)
+check_indicator = require_one(
+    "/usr/share/icons/Adwaita/**/checkbox-checked-symbolic.svg",
+    "Adwaita check indicator",
+)
+png_icon = require_one(
+    "/usr/share/icons/Adwaita/**/*.png",
+    "Adwaita PNG icon",
+)
+
+decode(symbolic_icon, "gtk_symbolic_icon")
+decode(check_indicator, "gtk_check_indicator")
+decode(png_icon, "gtk_png_decode")

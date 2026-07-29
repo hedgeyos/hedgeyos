@@ -10,7 +10,8 @@ idempotent migrations without being reset.
 
 The explicit package set in `rootfs/build-rootfs.sh` keeps the complete
 workstation base: APT, sudo, networking tools, Git, Python, build-essential,
-XFCE, terminal, Thunar, fonts, and icons.
+XFCE, terminal, Thunar, fonts, icons, and `librsvg2-common`. The latter supplies
+the GDK-Pixbuf SVG loader; installing only `librsvg2-2` is insufficient.
 
 Phase 1 additionally installs `devilspie2`. It reacts only when an X11 window is
 created:
@@ -55,9 +56,13 @@ version. It runs after XFCE's configuration service is available.
 
 - Fresh rootfs builds receive complete default files.
 - Existing installations receive only the named hedgeyos migration properties.
-- Existing alpha rootfs installations receive `devilspie2` and `liblua5.1-0`
-  from two bundled offline Debian packages, so the portrait policy does not
-  require a reset or network access.
+- Existing rootfs installations receive manifest-driven, checksum-verified
+  offline generations. `window-policy-v1` retains the original `devilspie2`
+  repair. `gtk-svg-loader-v1` adds the measured alpha.4 closure:
+  `libdav1d7`, `librsvg2-2`, and `librsvg2-common`.
+- Completion markers live under `/var/lib/hedgeyos/migrations`. Packages,
+  triggers, loader cache, and actual GTK decoding are verified before a marker
+  is written or XFCE may start.
 - User-created desktop files and unrelated XFCE settings are preserved.
 - The legacy hedgeyos launcher is replaced with the terminal launcher.
 - Completion is recorded under
@@ -68,6 +73,8 @@ The generic Linux runtime also installs:
 - `/usr/local/libexec/hedgeyos-runtime-preflight`, which verifies temporary
   storage, shared memory, runtime directories, X11, session D-Bus, and visible
   Android kernel facilities before XFCE starts.
+- `/usr/local/libexec/hedgeyos-gtk-asset-smoke`, which uses GDK-Pixbuf itself
+  to decode SVG symbolic assets, a checked indicator, and PNG.
 - `/usr/local/libexec/hedgeyos-start-desktop`, which owns the reproducible XFCE
   and session D-Bus startup sequence.
 
@@ -86,14 +93,14 @@ acceptance surface that must move together.
 2. Add or update its row in `rootfs/customizations.tsv`.
 3. Update this document when behavior, packages, ownership, or modes change.
 4. Build the rootfs as root with `rootfs/build-rootfs.sh`.
-5. Confirm the APK asset source includes the runtime helpers and
-   `app/src/main/assets/hedgeyos-linux/packages` contains the two
-   version-matched offline migration packages.
+5. Confirm the canonical runtime asset tree contains the manifest and exactly
+   its version-matched offline migration packages.
 6. Inspect archive ownership, modes, package capabilities, and customization
    coverage.
 7. Package the generated rootfs and the same runtime assets into the Android
    APK.
-8. Run `scripts/test-linux-runtime.sh`.
+8. Run `scripts/test-linux-runtime.sh` and
+   `scripts/test-linux-migrations.sh`.
 9. Test both fresh extraction and migration of an existing installation,
    including the runtime report and `/dev/shm`.
 

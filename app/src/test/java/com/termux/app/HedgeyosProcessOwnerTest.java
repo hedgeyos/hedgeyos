@@ -9,6 +9,7 @@ public class HedgeyosProcessOwnerTest {
 
     private static final String STATUS =
         "Name:\tproot\n" +
+            "PPid:\t7654\n" +
             "Uid:\t10234\t10234\t10234\t10234\n";
     private static final java.util.List<String> COMMAND = Arrays.asList(
         "/data/user/0/org.hedgeyos/files/usr/bin/proot",
@@ -71,5 +72,29 @@ public class HedgeyosProcessOwnerTest {
             "/data/user/0/org.hedgeyos/files/usr/bin/proot",
             "--rootfs=/data/user/0/org.hedgeyos/files/debian",
             "--kill-on-exit"));
+    }
+
+    @Test
+    public void exactSameUidDiagnosticChildMatchesRecordedParent() {
+        Assert.assertTrue(HedgeyosProcessOwner.matchesOwnedChild(
+            STATUS,
+            Arrays.asList("logcat", "--pid", "7654"),
+            10234,
+            7654,
+            "logcat",
+            "--pid",
+            "7654"));
+    }
+
+    @Test
+    public void diagnosticChildWithDifferentParentIsRejected() {
+        Assert.assertFalse(HedgeyosProcessOwner.matchesOwnedChild(
+            STATUS,
+            Arrays.asList("logcat", "--pid", "7654"),
+            10234,
+            9999,
+            "logcat",
+            "--pid",
+            "7654"));
     }
 }

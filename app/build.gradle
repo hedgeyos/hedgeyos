@@ -23,6 +23,7 @@ android {
     def splitAPKsForReleaseBuilds = System.getenv("TERMUX_SPLIT_APKS_FOR_RELEASE_BUILDS") ?: "1"
     def useExternalNativeBuild = (System.getenv("HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD") ?: "0") == "1"
     def includeX11Module = (System.getenv("HEDGEYOS_INCLUDE_X11_MODULE") ?: "0") == "1"
+    def x11Debug = (System.getenv("HEDGEYOS_X11_DEBUG") ?: "0") == "1"
 
     dependencies {
         implementation "androidx.annotation:annotation:1.9.0"
@@ -57,6 +58,7 @@ android {
 
         buildConfigField "String", "TERMUX_PACKAGE_VARIANT", "\"" + project.ext.packageVariant + "\"" // Used by TermuxApplication class
         buildConfigField "boolean", "HEDGEYOS_INCLUDE_X11_MODULE", includeX11Module ? "true" : "false"
+        buildConfigField "boolean", "HEDGEYOS_X11_DEBUG", x11Debug ? "true" : "false"
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "org.hedgeyos"
         manifestPlaceholders.TERMUX_APP_NAME = "hedgeyos"

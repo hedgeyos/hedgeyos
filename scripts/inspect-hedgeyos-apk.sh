@@ -122,6 +122,10 @@ contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-apply-defau
     fail "APK does not contain Linux defaults migration"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-runtime-preflight" ||
     fail "APK does not contain Linux runtime preflight"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-gtk-asset-smoke" ||
+    fail "APK does not contain GTK asset smoke helper"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/migration-packages.tsv" ||
+    fail "APK does not contain the offline migration manifest"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-start-desktop" ||
     fail "APK does not contain Linux desktop startup helper"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-window-rules.desktop" ||
@@ -134,6 +138,12 @@ contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/packages/devilspie2_
     fail "APK does not contain the offline devilspie2 migration package"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/packages/liblua5.1-0_" ||
     fail "APK does not contain the offline Lua migration dependency"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/packages/libdav1d7_" ||
+    fail "APK does not contain the offline librsvg decoder dependency"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/packages/librsvg2-2_" ||
+    fail "APK does not contain the offline SVG renderer runtime"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/packages/librsvg2-common_" ||
+    fail "APK does not contain the offline GDK-Pixbuf SVG loader"
 contains "$OUT_DIR/aapt-resources.txt" "drawable/hedgeyos_companion" ||
     fail "APK does not contain the Hitomi-derived hedgehog overlay asset"
 contains "$OUT_DIR/androidmanifest-xmltree.txt" "android.permission.WAKE_LOCK" ||
@@ -159,6 +169,10 @@ if [ -n "$ROOTFS_PROVENANCE" ] && [ -f "$ROOTFS_PROVENANCE" ]; then
         fail "rootfs package provenance contains VNC/RDP-related packages"
     contains "$ROOTFS_PROVENANCE" "devilspie2" ||
         fail "rootfs package provenance is missing devilspie2"
+    contains "$ROOTFS_PROVENANCE" "librsvg2-common" ||
+        fail "rootfs package provenance is missing librsvg2-common"
+    contains "$ROOTFS_PROVENANCE" "gtk_svg_smoke=PASS" ||
+        fail "rootfs provenance does not record successful GTK SVG decoding"
 fi
 
 {
@@ -178,6 +192,8 @@ fi
     printf 'linux_menu_icon=assets/hedgeyos-linux/hedgeyos-menu.png\n'
     printf 'linux_defaults=assets/hedgeyos-linux/hedgeyos-apply-defaults\n'
     printf 'linux_runtime_preflight=assets/hedgeyos-linux/hedgeyos-runtime-preflight\n'
+    printf 'linux_gtk_asset_smoke=assets/hedgeyos-linux/hedgeyos-gtk-asset-smoke\n'
+    printf 'linux_migration_manifest=assets/hedgeyos-linux/migration-packages.tsv\n'
     printf 'linux_desktop_startup=assets/hedgeyos-linux/hedgeyos-start-desktop\n'
     printf 'vnc_files=absent_in_apk_listing\n'
 } > "$OUT_DIR/summary.properties"

@@ -75,6 +75,11 @@ public final class HedgeyosHomeActivity extends MainActivity {
             }
 
             @Override
+            public void startX11DiagnosticSession() {
+                confirmX11DiagnosticSession();
+            }
+
+            @Override
             public void stopDesktop() {
                 HedgeyosRuntimeService.requestStopDesktop(HedgeyosHomeActivity.this);
             }
@@ -244,6 +249,20 @@ public final class HedgeyosHomeActivity extends MainActivity {
             .setMessage("Delete the installed Debian rootfs and keep the hedgeyos export directory?")
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Reset", (dialog, which) -> HedgeyosRuntimeService.requestResetDebian(this))
+            .show();
+    }
+
+    private void confirmX11DiagnosticSession() {
+        new AlertDialog.Builder(this)
+            .setTitle("Start X11 Diagnostic Session")
+            .setMessage(
+                "Detailed X11 logging may reduce desktop performance. " +
+                    "It will be enabled for one desktop session only and cleared before the next normal restart.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton(
+                "Start Diagnostic Session",
+                (dialog, which) ->
+                    HedgeyosRuntimeService.requestX11DiagnosticSession(this))
             .show();
     }
 

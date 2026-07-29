@@ -56,12 +56,38 @@ Implemented and device-proven behavior on 2026-07-26:
 - Moves the staging rootfs into `debian` only after health checks pass.
 - Leaves an existing healthy rootfs in place if a new extraction fails.
 - Starts embedded X11 on display `:1` through Android `app_process`.
-- Points embedded X11 `TMPDIR` at the Debian rootfs `/tmp` and
+- Points embedded X11 `TMPDIR` at HedgeyOS's host-backed runtime `/tmp` and
   `XKB_CONFIG_ROOT` at the bundled Debian XKB directory.
 - Starts the XFCE supervisor through bundled PRoot with `PROOT_LOADER`,
   `PROOT_TMP_DIR`, and `LD_LIBRARY_PATH` pointed at the hedgeyos private prefix.
 - Defaults the phone display to scaled mode, `displayScale=240`, fullscreen, and
   visible extra-key bar.
+
+The X11 `TMPDIR` is the host-backed HedgeyOS runtime `/tmp` shared with the
+guest, not persistent rootfs storage.
+
+## Existing Rootfs Migrations
+
+An existing rootfs is never replaced to apply package repairs. Before X11 or
+XFCE starts, `HedgeyosRuntimeManager.ensureLinuxMigrations()`:
+
+- parses the packaged tab-separated migration manifest;
+- rejects missing, duplicate, unexpected, wrong-version, wrong-architecture,
+  or wrong-checksum `.deb` assets;
+- copies one generation into a private temporary directory;
+- installs it offline through the common PRoot command builder;
+- completes dpkg configuration and package triggers;
+- runs generation-specific verification;
+- atomically writes `/var/lib/hedgeyos/migrations/<generation>` only after all
+  checks pass; and
+- removes temporary packages after success.
+
+An interrupted generation has no durable marker and retries on the next start.
+A failed migration leaves the existing rootfs and user packages in place,
+publishes `linux-migration.log`, sets runtime state to `FAILED`, and blocks a
+falsely healthy XFCE start. Fresh rootfs builds already contain the complete
+packages and generation markers, so they do not reinstall migration assets on
+first boot.
 
 The test-signed `v0.1.0-alpha.2` artifact reached `RUNNING` from a true
 uninstall/reinstall on the attached CPH2499 phone. The onboarding mini-window

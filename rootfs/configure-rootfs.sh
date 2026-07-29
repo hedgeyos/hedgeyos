@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 ROOTFS="${1:-}"
 CUSTOMIZATION_MANIFEST="$SCRIPT_DIR/customizations.tsv"
 RUNTIME_ASSETS="$SCRIPT_DIR/runtime-assets"
@@ -43,7 +43,7 @@ chmod 0644 "$ROOTFS/etc/sudo.conf"
 chmod 4755 "$ROOTFS/usr/bin/sudo"
 
 tab=$(printf '\t')
-while IFS="$tab" read -r source target owner mode policy; do
+while IFS="$tab" read -r source target owner mode _policy; do
     case "$source" in
         ''|'#'*) continue ;;
     esac
@@ -59,6 +59,20 @@ while IFS="$tab" read -r source target owner mode policy; do
     owner_group=${owner##*:}
     install -D -o "$owner_user" -g "$owner_group" -m "$mode" "$source_path" "$target_path"
 done < "$CUSTOMIZATION_MANIFEST"
+
+install -d -o 0 -g 0 -m 0755 "$ROOTFS/var/lib/hedgeyos/migrations"
+tab=$(printf '\t')
+while IFS="$tab" read -r package_name _ _ generation _ _ _; do
+    case "$package_name" in
+        ''|'#'*) continue ;;
+    esac
+    marker="$ROOTFS/var/lib/hedgeyos/migrations/$generation"
+    if [ ! -f "$marker" ]; then
+        printf 'generation=%s\ncompleted_by=fresh-rootfs-build\n' "$generation" > "$marker"
+        chown 0:0 "$marker"
+        chmod 0644 "$marker"
+    fi
+done < "$RUNTIME_ASSETS/hedgeyos-linux/migration-packages.tsv"
 
 cp -a "$ROOTFS/etc/skel/." "$ROOTFS/home/hedgeyos/"
 

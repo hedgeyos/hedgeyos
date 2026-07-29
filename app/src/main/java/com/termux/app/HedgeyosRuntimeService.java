@@ -19,6 +19,8 @@ public final class HedgeyosRuntimeService extends Service {
 
     static final String ACTION_START = "org.hedgeyos.runtime.START";
     static final String ACTION_RESTART_DESKTOP = "org.hedgeyos.runtime.RESTART_DESKTOP";
+    static final String ACTION_START_X11_DIAGNOSTIC =
+        "org.hedgeyos.runtime.START_X11_DIAGNOSTIC";
     static final String ACTION_STOP_DESKTOP = "org.hedgeyos.runtime.STOP_DESKTOP";
     static final String ACTION_RESET_DEBIAN = "org.hedgeyos.runtime.RESET_DEBIAN";
 
@@ -58,6 +60,10 @@ public final class HedgeyosRuntimeService extends Service {
             setDesiredRunning(this, true);
             acquireRuntimeWakeLock();
             HedgeyosRuntimeManager.restartDesktopAsync(this);
+        } else if (ACTION_START_X11_DIAGNOSTIC.equals(action)) {
+            setDesiredRunning(this, true);
+            acquireRuntimeWakeLock();
+            HedgeyosRuntimeManager.restartDesktopDiagnosticAsync(this);
         } else {
             setDesiredRunning(this, true);
             acquireRuntimeWakeLock();
@@ -91,6 +97,10 @@ public final class HedgeyosRuntimeService extends Service {
 
     public static void requestRestartDesktop(Context context) {
         startWithAction(context, ACTION_RESTART_DESKTOP);
+    }
+
+    public static void requestX11DiagnosticSession(Context context) {
+        startWithAction(context, ACTION_START_X11_DIAGNOSTIC);
     }
 
     public static void requestStopDesktop(Context context) {

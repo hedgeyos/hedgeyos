@@ -44,9 +44,22 @@ check_directory() {
 }
 
 printf 'hedgeyos Linux runtime report\n'
-printf 'version=1\n'
+printf 'version=2\n'
 printf 'display=%s\n' "${DISPLAY:-unset}"
 printf 'xdg_runtime_dir=%s\n' "${XDG_RUNTIME_DIR:-unset}"
+
+x11_session_mode=$(cat /run/hedgeyos/x11-session-mode 2>/dev/null || printf NORMAL)
+case "$x11_session_mode" in
+    NORMAL)
+        pass x11-diagnostic "OFF (NORMAL session)"
+        ;;
+    DIAGNOSTIC)
+        warning x11-diagnostic "ON (DIAGNOSTIC session; detailed logging may reduce performance)"
+        ;;
+    *)
+        warning x11-diagnostic "unknown session mode: $x11_session_mode"
+        ;;
+esac
 
 check_directory tmp /tmp 1777
 check_directory shm /dev/shm 1777
@@ -156,6 +169,7 @@ else
 fi
 
 if command -v dbus-run-session >/dev/null 2>&1; then
+    # shellcheck disable=SC2016
     if dbus-run-session -- sh -c 'test -n "${DBUS_SESSION_BUS_ADDRESS:-}"'; then
         pass session-dbus "dbus-run-session created a private session bus"
     else
@@ -165,6 +179,33 @@ elif command -v dbus-launch >/dev/null 2>&1; then
     warning session-dbus "dbus-run-session is absent; desktop will use dbus-launch"
 else
     fatal session-dbus "no session D-Bus launcher is installed"
+fi
+
+gtk_loader=$(find /usr/lib -type f -path '*/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader_svg.so' -print -quit 2>/dev/null)
+if [ -n "$gtk_loader" ]; then
+    pass gtk-svg-loader "$gtk_loader is installed"
+else
+    fatal gtk-svg-loader "libpixbufloader_svg.so is missing"
+fi
+
+gtk_loader_cache=$(find /usr/lib -type f -path '*/gdk-pixbuf-2.0/2.10.0/loaders.cache' -print -quit 2>/dev/null)
+if [ -n "$gtk_loader_cache" ] &&
+    grep -Fq 'libpixbufloader_svg.so' "$gtk_loader_cache" &&
+    grep -Fq '"svg"' "$gtk_loader_cache"; then
+    pass gtk-svg-cache "$gtk_loader_cache contains the SVG loader"
+else
+    fatal gtk-svg-cache "the active GDK-Pixbuf loader cache has no SVG loader entry"
+fi
+
+gtk_smoke_output=
+if [ -x /usr/local/libexec/hedgeyos-gtk-asset-smoke ]; then
+    if gtk_smoke_output=$(/usr/local/libexec/hedgeyos-gtk-asset-smoke 2>&1); then
+        pass gtk-svg-decode "SVG, symbolic icon, check indicator, and PNG decoding passed"
+    else
+        fatal gtk-svg-decode "GTK asset smoke test failed: $gtk_smoke_output"
+    fi
+else
+    fatal gtk-svg-decode "/usr/local/libexec/hedgeyos-gtk-asset-smoke is missing"
 fi
 
 if [ -S /run/dbus/system_bus_socket ]; then

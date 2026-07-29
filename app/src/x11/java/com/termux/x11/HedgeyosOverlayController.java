@@ -34,6 +34,7 @@ final class HedgeyosOverlayController {
         void showRuntimeReport();
         void showLogs();
         void restartDesktop();
+        void startX11DiagnosticSession();
         void stopDesktop();
         void resetDebian();
         void toggleKeyboard();
@@ -206,6 +207,9 @@ final class HedgeyosOverlayController {
         body.addView(actionButton("Linux Runtime Report", actions::showRuntimeReport));
         body.addView(actionButton("Open hedgeyos logs", actions::showLogs));
         body.addView(actionButton("Restart Desktop", actions::restartDesktop));
+        body.addView(actionButton(
+            "Start X11 Diagnostic Session",
+            actions::startX11DiagnosticSession));
         body.addView(actionButton("Stop Desktop", actions::stopDesktop));
         body.addView(actionButton("Reset Debian", actions::resetDebian));
         body.addView(actionButton("Toggle Soft Keyboard", () -> {

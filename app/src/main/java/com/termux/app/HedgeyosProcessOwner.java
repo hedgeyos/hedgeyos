@@ -60,6 +60,20 @@ final class HedgeyosProcessOwner {
         return stopped;
     }
 
+    static boolean stopRecordedOwnedChild(File childPidFile, File parentPidFile) {
+        int childPid = readPid(childPidFile);
+        int parentPid = readPid(parentPidFile);
+        boolean stopped = childPid > 0 && parentPid > 0 &&
+            stopIfOwnedChild(
+                childPid,
+                parentPid,
+                "logcat",
+                "--pid",
+                Integer.toString(parentPid));
+        clear(childPidFile);
+        return stopped;
+    }
+
     private static List<Integer> findMatching(String... requiredCommandArguments) {
         List<Integer> matching = new ArrayList<>();
         File[] entries = new File("/proc").listFiles();
@@ -89,7 +103,25 @@ final class HedgeyosProcessOwner {
             status, commandArguments, Os.getuid(), requiredCommandArguments)) {
             return false;
         }
+        return stopProcess(pid);
+    }
 
+    private static boolean stopIfOwnedChild(int pid, int expectedParentPid,
+                                            String... requiredCommandArguments) {
+        List<String> commandArguments = readCommandArguments(pid);
+        String status = readText(new File("/proc/" + pid + "/status"));
+        if (!matchesOwnedChild(
+            status,
+            commandArguments,
+            Os.getuid(),
+            expectedParentPid,
+            requiredCommandArguments)) {
+            return false;
+        }
+        return stopProcess(pid);
+    }
+
+    private static boolean stopProcess(int pid) {
         try {
             Os.kill(pid, OsConstants.SIGTERM);
         } catch (Exception ignored) {
@@ -126,6 +158,17 @@ final class HedgeyosProcessOwner {
         return true;
     }
 
+    static boolean matchesOwnedChild(String status, List<String> commandArguments,
+                                     int expectedUid, int expectedParentPid,
+                                     String... requiredCommandArguments) {
+        return statusHasParentPid(status, expectedParentPid) &&
+            matchesOwnedProcess(
+                status,
+                commandArguments,
+                expectedUid,
+                requiredCommandArguments);
+    }
+
     private static boolean statusHasUid(String status, int expectedUid) {
         String expected = Integer.toString(expectedUid);
         for (String line : status.split("\n")) {
@@ -134,6 +177,16 @@ final class HedgeyosProcessOwner {
             }
             String[] fields = line.substring(4).trim().split("\\s+");
             return fields.length > 0 && expected.equals(fields[0]);
+        }
+        return false;
+    }
+
+    private static boolean statusHasParentPid(String status, int expectedParentPid) {
+        String expected = Integer.toString(expectedParentPid);
+        for (String line : status.split("\n")) {
+            if (line.startsWith("PPid:")) {
+                return expected.equals(line.substring(5).trim());
+            }
         }
         return false;
     }
@@ -167,7 +220,7 @@ final class HedgeyosProcessOwner {
         }
     }
 
-    private static int readPid(File pidFile) {
+    static int readPid(File pidFile) {
         String value = readText(pidFile).trim();
         return parsePid(value);
     }

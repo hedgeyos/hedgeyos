@@ -20,6 +20,10 @@ public final class LinuxRuntimeCapabilities {
     public final boolean systemDbus;
     public final boolean procSysctlVisibility;
     public final boolean x11Socket;
+    public final boolean gtkSvgLoader;
+    public final boolean gtkSvgLoaderCache;
+    public final boolean gtkSvgDecode;
+    public final String x11SessionMode;
     public final List<CompatibilityWarning> warnings;
 
     private LinuxRuntimeCapabilities(Builder builder) {
@@ -36,6 +40,10 @@ public final class LinuxRuntimeCapabilities {
         systemDbus = builder.systemDbus;
         procSysctlVisibility = builder.procSysctlVisibility;
         x11Socket = builder.x11Socket;
+        gtkSvgLoader = builder.gtkSvgLoader;
+        gtkSvgLoaderCache = builder.gtkSvgLoaderCache;
+        gtkSvgDecode = builder.gtkSvgDecode;
+        x11SessionMode = builder.x11SessionMode;
         warnings = Collections.unmodifiableList(new ArrayList<>(builder.warnings));
     }
 
@@ -58,7 +66,7 @@ public final class LinuxRuntimeCapabilities {
             String severity = fields[0];
             String name = fields[1];
             boolean available = "PASS".equals(severity);
-            builder.setCapability(name, available);
+            builder.setCapability(name, available, fields[2]);
             if (!available) {
                 builder.warnings.add(new CompatibilityWarning(severity, name, fields[2]));
             }
@@ -83,6 +91,16 @@ public final class LinuxRuntimeCapabilities {
         appendCapability(text, "System D-Bus", systemDbus);
         appendCapability(text, "Android procfs sysctls", procSysctlVisibility);
         appendCapability(text, "X11 socket", x11Socket);
+        appendResult(text, "GTK SVG loader", gtkSvgLoader);
+        appendResult(text, "GTK SVG loader cache", gtkSvgLoaderCache);
+        appendResult(text, "GTK SVG decode", gtkSvgDecode);
+        text.append("X11 diagnostic mode: ")
+            .append("DIAGNOSTIC".equals(x11SessionMode)
+                ? "ON"
+                : ("NORMAL".equals(x11SessionMode) ? "OFF" : "UNKNOWN"))
+            .append(" (")
+            .append(x11SessionMode)
+            .append(" session)\n");
 
         if (!warnings.isEmpty()) {
             text.append("\nWarnings\n");
@@ -100,6 +118,10 @@ public final class LinuxRuntimeCapabilities {
 
     private static void appendCapability(StringBuilder text, String label, boolean available) {
         text.append(label).append(": ").append(available ? "available" : "unavailable").append('\n');
+    }
+
+    private static void appendResult(StringBuilder text, String label, boolean passed) {
+        text.append(label).append(": ").append(passed ? "PASS" : "FAILED").append('\n');
     }
 
     public static final class CompatibilityWarning {
@@ -128,9 +150,13 @@ public final class LinuxRuntimeCapabilities {
         boolean systemDbus;
         boolean procSysctlVisibility;
         boolean x11Socket;
+        boolean gtkSvgLoader;
+        boolean gtkSvgLoaderCache;
+        boolean gtkSvgDecode;
+        String x11SessionMode = "UNKNOWN";
         final List<CompatibilityWarning> warnings = new ArrayList<>();
 
-        void setCapability(String name, boolean available) {
+        void setCapability(String name, boolean available, String message) {
             if ("tmp".equals(name)) {
                 writableTmp = available;
             } else if ("shm".equals(name)) {
@@ -153,6 +179,18 @@ public final class LinuxRuntimeCapabilities {
                 procSysctlVisibility = available;
             } else if ("x11".equals(name)) {
                 x11Socket = available;
+            } else if ("gtk-svg-loader".equals(name)) {
+                gtkSvgLoader = available;
+            } else if ("gtk-svg-cache".equals(name)) {
+                gtkSvgLoaderCache = available;
+            } else if ("gtk-svg-decode".equals(name)) {
+                gtkSvgDecode = available;
+            } else if ("x11-diagnostic".equals(name)) {
+                if (message.startsWith("OFF")) {
+                    x11SessionMode = "NORMAL";
+                } else if (message.startsWith("ON")) {
+                    x11SessionMode = "DIAGNOSTIC";
+                }
             }
         }
     }

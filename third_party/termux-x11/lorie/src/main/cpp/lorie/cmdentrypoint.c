@@ -14,6 +14,8 @@
 #include <sys/socket.h>
 #include <sys/prctl.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 #include <libgen.h>
 #include <globals.h>
 #include <xkbsrv.h>
@@ -39,6 +41,32 @@ char *xtrans_unix_path_x11 = NULL;
 char *xtrans_unix_dir_x11 = NULL;
 
 struct xorg_list registeredBuffers;
+
+static void* reapDiagnosticChild(void* argument) {
+    pid_t pid = (pid_t) (intptr_t) argument;
+    while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) {}
+    return NULL;
+}
+
+static void recordDiagnosticChild(pid_t pid) {
+    const char* path = getenv("HEDGEYOS_X11_DIAGNOSTIC_PID_FILE");
+    if (!path || !*path)
+        return;
+
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd < 0) {
+        log(ERROR, "Failed to record diagnostic logcat PID: %s", strerror(errno));
+        return;
+    }
+    dprintf(fd, "%d\n", pid);
+    close(fd);
+}
+
+static void startDiagnosticChildReaper(pid_t pid) {
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, reapDiagnosticChild, (void*) (intptr_t) pid) == 0)
+        pthread_detach(thread);
+}
 
 static void* startServer(__unused void* cookie) {
     char* envp[] = { NULL };
@@ -97,12 +125,21 @@ Java_com_termux_x11_CmdEntryPoint_start(JNIEnv *env, __unused jclass cls, jobjec
             log(ERROR, "Failed to set process affinity: %s", strerror(errno));
     }
 
-    if (getenv("TERMUX_X11_DEBUG") && !fork()) {
-        // Printing logs of local logcat.
-        char pid[32] = {0};
-        prctl(PR_SET_PDEATHSIG, SIGTERM);
-        sprintf(pid, "%d", getppid());
-        execlp("logcat", "logcat", "--pid", pid, NULL);
+    if (getenv("TERMUX_X11_DEBUG")) {
+        pid_t diagnosticPid = fork();
+        if (diagnosticPid == 0) {
+            // Printing logs of local logcat.
+            char pid[32] = {0};
+            prctl(PR_SET_PDEATHSIG, SIGTERM);
+            sprintf(pid, "%d", getppid());
+            execlp("logcat", "logcat", "--pid", pid, NULL);
+            _exit(127);
+        } else if (diagnosticPid > 0) {
+            recordDiagnosticChild(diagnosticPid);
+            startDiagnosticChildReaper(diagnosticPid);
+        } else {
+            log(ERROR, "Failed to fork diagnostic logcat: %s", strerror(errno));
+        }
     }
 
     // No matter what tracer is attached.

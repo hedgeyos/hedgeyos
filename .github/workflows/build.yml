@@ -32,7 +32,18 @@ jobs:
       - name: Install rootfs build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mmdebstrap zstd qemu-user-static binfmt-support ca-certificates curl bison
+          sudo apt-get install -y mmdebstrap zstd qemu-user-static binfmt-support ca-certificates curl bison shellcheck
+
+      - name: Lint HedgeyOS shell scripts
+        run: |
+          shellcheck \
+            rootfs/build-rootfs.sh \
+            rootfs/configure-rootfs.sh \
+            rootfs/verify-gtk-svg.sh \
+            rootfs/verify-migration-packages.sh \
+            rootfs/runtime-assets/hedgeyos-linux/hedgeyos-runtime-preflight \
+            scripts/test-linux-runtime.sh \
+            scripts/test-linux-migrations.sh
 
       - name: Fetch Debian archive keyring
         run: |
@@ -71,6 +82,7 @@ jobs:
         env:
           HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD: "1"
           HEDGEYOS_INCLUDE_X11_MODULE: "1"
+          HEDGEYOS_X11_DEBUG: "0"
           HEDGEYOS_SIGN_RELEASE: "0"
         run: |
           export ANDROID_SDK_ROOT="$ANDROID_HOME"

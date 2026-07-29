@@ -23,6 +23,11 @@ git submodule update --init --recursive
 HEDGEYOS_INCLUDE_X11_MODULE=1 HEDGEYOS_USE_EXTERNAL_NATIVE_BUILD=1 HEDGEYOS_SIGN_RELEASE=0 ./scripts/build-hedgeyos.sh
 ```
 
+Normal local, CI, and release builds leave `HEDGEYOS_X11_DEBUG` unset or set it
+to `0`; both produce `BuildConfig.HEDGEYOS_X11_DEBUG=false`, and normal runtime
+code removes `TERMUX_X11_DEBUG` entirely. Only an intentional diagnostic build
+may set `HEDGEYOS_X11_DEBUG=1`.
+
 The script currently verifies:
 
 - Java.
@@ -83,13 +88,18 @@ GitHub Actions workflow:
   background-protection permissions, overlay artwork, Linux migration assets,
   embedded X11 native library, and absence of obvious VNC/RDP files.
 - It verifies the rootfs with `scripts/inspect-hedgeyos-rootfs.sh`, including
-  customization files, modes, owners, portrait window package, and provenance.
+  customization files, modes, owners, migration generations, SVG
+  loader/cache/package state, actual GTK decode provenance, portrait window
+  package, and provenance.
 - Unit CI runs `scripts/test-linux-defaults.sh` to prove migration idempotence
   and preservation of unrelated desktop files.
 - Unit CI runs `scripts/test-linux-runtime.sh` plus
   `HedgeyosGuestRuntimeTest` to enforce the single PRoot mount contract,
   `/dev/shm` and `/run` ordering, versioned runtime assets, and the absence of
   app-specific Chromium workarounds.
+- Unit CI runs `scripts/test-linux-migrations.sh` and ShellCheck. The migration
+  test enforces manifest/package identity, exact versions and checksums,
+  generation markers, and removal of the former two-package/devilspie shortcut.
 - Focused runtime unit tests also verify applied directory modes, stale
   ephemeral-state cleanup, atomic state replacement, parsed capabilities,
   guest-UID-specific `XDG_RUNTIME_DIR`, and exact same-UID process targeting.

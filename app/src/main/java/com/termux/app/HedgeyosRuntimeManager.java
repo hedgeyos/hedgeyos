@@ -6,6 +6,7 @@ import android.os.Environment;
 import android.os.StatFs;
 import android.system.Os;
 
+import com.termux.BuildConfig;
 import com.termux.shared.termux.TermuxConstants;
 
 import java.io.BufferedReader;
@@ -21,9 +22,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public final class HedgeyosRuntimeManager {
@@ -53,6 +56,8 @@ public final class HedgeyosRuntimeManager {
     private static final long MIN_FREE_BYTES_BEFORE_EXTRACTION = 1536L * 1024L * 1024L;
     private static final long DESKTOP_START_GRACE_MS = 2500L;
     private static final Object LOCK = new Object();
+    private static final HedgeyosX11DiagnosticState X11_DIAGNOSTIC_STATE =
+        new HedgeyosX11DiagnosticState();
 
     private static boolean sWorkerRunning;
     private static Process sDesktopProcess;
@@ -71,7 +76,9 @@ public final class HedgeyosRuntimeManager {
         Thread worker = new Thread(() -> {
             try {
                 ensureInstalled(appContext);
-                startDesktop(appContext);
+                startDesktop(
+                    appContext,
+                    X11_DIAGNOSTIC_STATE.consume(BuildConfig.HEDGEYOS_X11_DEBUG));
             } catch (Exception e) {
                 setState(appContext, STATE_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
                 appendLog(appContext, "runtime", stackTrace(e));
@@ -96,7 +103,9 @@ public final class HedgeyosRuntimeManager {
         Thread worker = new Thread(() -> {
             try {
                 stopDesktop(appContext);
-                startDesktop(appContext);
+                startDesktop(
+                    appContext,
+                    X11_DIAGNOSTIC_STATE.consume(BuildConfig.HEDGEYOS_X11_DEBUG));
             } catch (Exception e) {
                 setState(appContext, STATE_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
                 appendLog(appContext, "runtime", stackTrace(e));
@@ -106,6 +115,35 @@ public final class HedgeyosRuntimeManager {
                 }
             }
         }, "hedgeyos-runtime-restart");
+        worker.start();
+    }
+
+    static void restartDesktopDiagnosticAsync(Context context) {
+        Context appContext = context.getApplicationContext();
+        synchronized (LOCK) {
+            if (sWorkerRunning) {
+                return;
+            }
+            sWorkerRunning = true;
+        }
+
+        Thread worker = new Thread(() -> {
+            try {
+                stopDesktop(appContext);
+                X11_DIAGNOSTIC_STATE.requestOneShot();
+                startDesktop(
+                    appContext,
+                    X11_DIAGNOSTIC_STATE.consume(BuildConfig.HEDGEYOS_X11_DEBUG));
+            } catch (Exception e) {
+                setState(appContext, STATE_FAILED, e.getMessage() == null ? e.toString() : e.getMessage());
+                appendLog(appContext, "runtime", stackTrace(e));
+            } finally {
+                X11_DIAGNOSTIC_STATE.clear();
+                synchronized (LOCK) {
+                    sWorkerRunning = false;
+                }
+            }
+        }, "hedgeyos-runtime-x11-diagnostic");
         worker.start();
     }
 
@@ -137,6 +175,7 @@ public final class HedgeyosRuntimeManager {
 
     static void stopDesktop(Context context) {
         Context appContext = context.getApplicationContext();
+        X11_DIAGNOSTIC_STATE.clear();
         setState(appContext, STATE_STOPPING, "Stopping hedgeyos desktop supervisor.");
         Process processToStop = null;
         synchronized (LOCK) {
@@ -158,7 +197,11 @@ public final class HedgeyosRuntimeManager {
         }
         File desktopLog = new File(logDir(appContext), "desktop.log");
         stopOwnedDesktopProcesses(appContext, desktopLog);
-        HedgeyosX11Bridge.stopServer(appContext, x11PidFile(appContext), desktopLog);
+        HedgeyosX11Bridge.stopServer(
+            appContext,
+            x11PidFile(appContext),
+            x11DiagnosticPidFile(appContext),
+            desktopLog);
         setState(appContext, isRootfsInstalled(appContext) ? STATE_READY : STATE_NOT_INSTALLED, "hedgeyos desktop is stopped.");
     }
 
@@ -207,6 +250,7 @@ public final class HedgeyosRuntimeManager {
         appendFileTail(result, new File(logDir(context), "runtime.log"), 12000);
         appendFileTail(result, new File(logDir(context), "firstboot.log"), 20000);
         appendFileTail(result, new File(logDir(context), "desktop.log"), 12000);
+        appendFileTail(result, new File(publicLogDir(context), "linux-migration.log"), 12000);
         if (result.length() == 0) {
             return "No hedgeyos logs have been written yet.";
         }
@@ -234,7 +278,7 @@ public final class HedgeyosRuntimeManager {
 
         if (isRootfsInstalled(context)) {
             ensureLinuxBranding(context, rootfsDir(context));
-            ensureLinuxWindowPolicy(context);
+            ensureLinuxMigrations(context);
             setState(context, STATE_READY, "Debian rootfs is installed.");
             return;
         }
@@ -281,7 +325,9 @@ public final class HedgeyosRuntimeManager {
         setState(context, STATE_READY, "Debian rootfs is installed.");
     }
 
-    private static void startDesktop(Context context) throws Exception {
+    private static void startDesktop(Context context,
+                                     HedgeyosX11DiagnosticState.SessionMode x11SessionMode)
+        throws Exception {
         if (!isRootfsInstalled(context)) {
             setState(context, STATE_NOT_INSTALLED, "Debian rootfs is not installed.");
             return;
@@ -305,11 +351,23 @@ public final class HedgeyosRuntimeManager {
 
         File desktopLog = new File(logDir(context), "desktop.log");
         stopOwnedDesktopProcesses(context, desktopLog);
-        HedgeyosX11Bridge.stopServer(context, x11PidFile(context), desktopLog);
+        HedgeyosX11Bridge.stopServer(
+            context,
+            x11PidFile(context),
+            x11DiagnosticPidFile(context),
+            desktopLog);
         HedgeyosGuestRuntime.Layout runtime = guestRuntime(context);
         HedgeyosGuestRuntime.prepare(runtime, rootfsDir(context), true);
+        File x11SessionModeFile = new File(runtime.run, "hedgeyos/x11-session-mode");
+        writeFile(x11SessionModeFile, x11SessionMode.name() + "\n");
         setState(context, STATE_STARTING_X11, "Starting embedded Termux:X11 server.");
-        HedgeyosX11Bridge.startServer(context, runtime.tmp, desktopLog, x11PidFile(context));
+        HedgeyosX11Bridge.startServer(
+            context,
+            runtime.tmp,
+            desktopLog,
+            x11PidFile(context),
+            x11DiagnosticPidFile(context),
+            x11SessionMode);
 
         try {
             runLinuxRuntimePreflight(context, desktopLog);
@@ -350,7 +408,11 @@ public final class HedgeyosRuntimeManager {
                 }
             }
             stopOwnedDesktopProcesses(context, desktopLog);
-            HedgeyosX11Bridge.stopServer(context, x11PidFile(context), desktopLog);
+            HedgeyosX11Bridge.stopServer(
+                context,
+                x11PidFile(context),
+                x11DiagnosticPidFile(context),
+                desktopLog);
             throw e;
         }
     }
@@ -361,7 +423,9 @@ public final class HedgeyosRuntimeManager {
 
     private static void openDebianTerminal(Context context) throws Exception {
         if (!STATE_RUNNING.equals(getStatus(context).state)) {
-            startDesktop(context);
+            startDesktop(
+                context,
+                X11_DIAGNOSTIC_STATE.consume(BuildConfig.HEDGEYOS_X11_DEBUG));
         }
         if (!isRootfsInstalled(context)) {
             throw new IOException("Debian rootfs is not installed.");
@@ -388,7 +452,9 @@ public final class HedgeyosRuntimeManager {
 
     private static void runDebianAcceptanceChecks(Context context) throws Exception {
         if (!STATE_RUNNING.equals(getStatus(context).state)) {
-            startDesktop(context);
+            startDesktop(
+                context,
+                X11_DIAGNOSTIC_STATE.consume(BuildConfig.HEDGEYOS_X11_DEBUG));
         }
         if (!isRootfsInstalled(context)) {
             throw new IOException("Debian rootfs is not installed.");
@@ -601,6 +667,10 @@ public final class HedgeyosRuntimeManager {
             "usr/local/libexec/hedgeyos-apply-defaults", 0755);
         installLinuxRuntimeAsset(context, rootfs, "hedgeyos-runtime-preflight",
             "usr/local/libexec/hedgeyos-runtime-preflight", 0755);
+        installLinuxRuntimeAsset(context, rootfs, "hedgeyos-gtk-asset-smoke",
+            "usr/local/libexec/hedgeyos-gtk-asset-smoke", 0755);
+        installLinuxRuntimeAsset(context, rootfs, "migration-packages.tsv",
+            "usr/share/hedgeyos/migration-packages.tsv", 0644);
         installLinuxRuntimeAsset(context, rootfs, "hedgeyos-start-desktop",
             "usr/local/libexec/hedgeyos-start-desktop", 0755);
         installLinuxRuntimeAsset(context, rootfs, "hedgeyos-window-rules.desktop",
@@ -626,55 +696,169 @@ public final class HedgeyosRuntimeManager {
         }
     }
 
-    private static void ensureLinuxWindowPolicy(Context context) throws Exception {
+    private static void ensureLinuxMigrations(Context context) throws Exception {
         File rootfs = rootfsDir(context);
-        if (new File(rootfs, "usr/bin/devilspie2").exists()) {
-            return;
+        String manifestAsset = "hedgeyos-linux/migration-packages.tsv";
+        HedgeyosMigrationManifest manifest;
+        try (InputStream input = context.getAssets().open(manifestAsset)) {
+            manifest = HedgeyosMigrationManifest.parse(input);
         }
 
         String assetDirectory = "hedgeyos-linux/packages";
-        String[] packageNames = context.getAssets().list(assetDirectory);
-        if (packageNames == null) {
-            packageNames = new String[0];
+        String[] assetNames = context.getAssets().list(assetDirectory);
+        Set<String> actualPackages = new HashSet<>();
+        if (assetNames != null) {
+            for (String assetName : assetNames) {
+                if (assetName.endsWith(".deb")) {
+                    actualPackages.add(assetName);
+                }
+            }
         }
-        Arrays.sort(packageNames);
+        Set<String> expectedPackages = new HashSet<>();
+        for (HedgeyosMigrationManifest.Entry entry : manifest.entries()) {
+            expectedPackages.add(entry.filename);
+        }
+        if (!actualPackages.equals(expectedPackages)) {
+            throw new IOException(
+                "Offline Linux migration assets do not match their manifest. Expected=" +
+                    expectedPackages + ", actual=" + actualPackages + ".");
+        }
 
-        File packageDirectory = new File(rootfs, "var/cache/hedgeyos-migration-packages");
-        deleteRecursively(packageDirectory);
-        mkdirs(packageDirectory);
-
-        int copiedPackages = 0;
-        for (String packageName : packageNames) {
-            if (!packageName.endsWith(".deb")) {
+        for (String generation : manifest.generations()) {
+            if (HedgeyosMigrationManifest.isGenerationComplete(rootfs, generation)) {
+                appendLog(
+                    context,
+                    "linux-migration",
+                    "Skipping completed Linux migration " + generation + ".");
                 continue;
             }
-            copyBundledAsset(context, assetDirectory + "/" + packageName,
-                new File(packageDirectory, packageName));
-            copiedPackages++;
+
+            setState(
+                context,
+                STATE_CONFIGURING,
+                "Applying offline Linux migration " + generation + ".");
+            List<HedgeyosMigrationManifest.Entry> entries =
+                manifest.entriesForGeneration(generation);
+            File packageDirectory = new File(
+                rootfs,
+                "var/cache/hedgeyos-migrations/" + generation);
+            deleteRecursively(packageDirectory);
+            mkdirs(packageDirectory);
+
+            List<String> guestPackages = new ArrayList<>();
+            for (HedgeyosMigrationManifest.Entry entry : entries) {
+                File packageFile = new File(packageDirectory, entry.filename);
+                copyBundledAsset(
+                    context,
+                    assetDirectory + "/" + entry.filename,
+                    packageFile);
+                String actualSha = sha256(packageFile);
+                if (!entry.sha256.equals(actualSha)) {
+                    throw new IOException(
+                        "Offline migration package checksum mismatch for " +
+                            entry.filename + ".");
+                }
+                guestPackages.add(
+                    "/var/cache/hedgeyos-migrations/" + generation + "/" +
+                        entry.filename);
+            }
+
+            String command = buildMigrationCommand(generation, entries, guestPackages);
+            File migrationLog = new File(publicLogDir(context), "linux-migration.log");
+            ProcessBuilder builder = createDebianProcessBuilder(
+                context,
+                buildDebianRootCommand(context, command),
+                migrationLog);
+
+            appendLog(
+                context,
+                "linux-migration",
+                "Applying offline Linux migration " + generation +
+                    " with " + entries.size() + " verified package(s).");
+            Process process = builder.start();
+            if (!process.waitFor(5, TimeUnit.MINUTES)) {
+                process.destroyForcibly();
+                throw new IOException(
+                    "Offline Linux migration " + generation +
+                        " timed out. Existing Debian data was preserved; retry by starting the desktop again.");
+            }
+            int exitCode = process.exitValue();
+            if (exitCode != 0 ||
+                !HedgeyosMigrationManifest.isGenerationComplete(rootfs, generation)) {
+                throw new IOException(
+                    "Offline Linux migration " + generation +
+                        " failed with exit code " + exitCode +
+                        ". Existing Debian data was preserved. See linux-migration.log and retry by starting the desktop again.");
+            }
+            appendLog(
+                context,
+                "linux-migration",
+                "Completed offline Linux migration " + generation + ".");
         }
-        if (copiedPackages != 2) {
-            throw new IOException("Offline Linux window-policy migration is incomplete: expected 2 packages, found " +
-                copiedPackages + ".");
+    }
+
+    private static String buildMigrationCommand(
+        String generation,
+        List<HedgeyosMigrationManifest.Entry> entries,
+        List<String> guestPackages) {
+        StringBuilder command = new StringBuilder();
+        command.append("set -eu\n");
+        command.append("export DEBIAN_FRONTEND=noninteractive\n");
+        command.append("mkdir -p /var/lib/hedgeyos/migrations\n");
+        command.append("rm -f ")
+            .append(quote("/var/lib/hedgeyos/migrations/" + generation + ".tmp"))
+            .append("\n");
+        command.append("dpkg -i");
+        for (String guestPackage : guestPackages) {
+            command.append(' ').append(quote(guestPackage));
+        }
+        command.append("\n");
+        command.append("dpkg --configure -a\n");
+
+        for (HedgeyosMigrationManifest.Entry entry : entries) {
+            command.append("test \"$(dpkg-query -W -f='${db:Status-Abbrev}' ")
+                .append(quote(entry.packageName))
+                .append(")\" = 'ii '\n");
+            command.append("test \"$(dpkg-query -W -f='${Version}' ")
+                .append(quote(entry.packageName))
+                .append(")\" = ")
+                .append(quote(entry.requiredVersion))
+                .append("\n");
+            command.append("test \"$(dpkg-query -W -f='${Architecture}' ")
+                .append(quote(entry.packageName))
+                .append(")\" = ")
+                .append(quote(entry.architecture))
+                .append("\n");
         }
 
-        File migrationLog = new File(logDir(context), "linux-migration.log");
-        List<String> command = buildDebianRootCommand(context,
-            "set -e; export DEBIAN_FRONTEND=noninteractive; " +
-                "dpkg -i /var/cache/hedgeyos-migration-packages/*.deb; " +
-                "rm -rf /var/cache/hedgeyos-migration-packages");
-        ProcessBuilder builder = createDebianProcessBuilder(context, command, migrationLog);
+        if ("gtk-svg-loader-v1".equals(generation)) {
+            command.append(
+                "gtk_loader=$(find /usr/lib -type f -path '*/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader_svg.so' -print -quit)\n");
+            command.append("test -n \"$gtk_loader\"\n");
+            command.append(
+                "gtk_cache=$(find /usr/lib -type f -path '*/gdk-pixbuf-2.0/2.10.0/loaders.cache' -print -quit)\n");
+            command.append("test -n \"$gtk_cache\"\n");
+            command.append("grep -Fq 'libpixbufloader_svg.so' \"$gtk_cache\"\n");
+            command.append("grep -Fq '\"svg\"' \"$gtk_cache\"\n");
+            command.append("/usr/local/libexec/hedgeyos-gtk-asset-smoke\n");
+        }
 
-        appendLog(migrationLog, "Installing offline Linux window-policy migration.");
-        Process process = builder.start();
-        if (!process.waitFor(2, TimeUnit.MINUTES)) {
-            process.destroyForcibly();
-            throw new IOException("Offline Linux window-policy migration timed out.");
-        }
-        if (process.exitValue() != 0 || !new File(rootfs, "usr/bin/devilspie2").exists()) {
-            throw new IOException("Offline Linux window-policy migration failed with exit code " +
-                process.exitValue() + ". See linux-migration.log.");
-        }
-        appendLog(migrationLog, "Installed offline Linux window-policy migration.");
+        String marker = "/var/lib/hedgeyos/migrations/" + generation;
+        String markerTemporary = marker + ".tmp";
+        command.append("printf 'generation=%s\\ncompleted_at=%s\\n' ")
+            .append(quote(generation))
+            .append(" \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > ")
+            .append(quote(markerTemporary))
+            .append("\n");
+        command.append("mv -f ")
+            .append(quote(markerTemporary))
+            .append(' ')
+            .append(quote(marker))
+            .append("\n");
+        command.append("rm -rf ")
+            .append(quote("/var/cache/hedgeyos-migrations/" + generation))
+            .append("\n");
+        return command.toString();
     }
 
     private static void ensureDirectories(Context context) throws IOException {
@@ -1011,6 +1195,10 @@ public final class HedgeyosRuntimeManager {
 
     private static File x11PidFile(Context context) {
         return new File(guestRuntime(context).processes, "x11.pid");
+    }
+
+    private static File x11DiagnosticPidFile(Context context) {
+        return new File(guestRuntime(context).processes, "x11-diagnostic-logcat.pid");
     }
 
     private static File prootBinary(Context context) {

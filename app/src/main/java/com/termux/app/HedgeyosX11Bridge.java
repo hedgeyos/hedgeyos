@@ -3,12 +3,15 @@ package com.termux.app;
 import android.content.Context;
 import android.content.Intent;
 
+import com.termux.BuildConfig;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 final class HedgeyosX11Bridge {
@@ -33,7 +36,9 @@ final class HedgeyosX11Bridge {
         }
     }
 
-    static void startServer(Context context, File tmpDir, File logFile, File pidFile) throws Exception {
+    static void startServer(Context context, File tmpDir, File logFile, File pidFile,
+                            File diagnosticPidFile,
+                            HedgeyosX11DiagnosticState.SessionMode requestedMode) throws Exception {
         if (!isAvailable(context)) {
             throw new IOException("Embedded Termux:X11 module is not packaged in this build.");
         }
@@ -52,6 +57,7 @@ final class HedgeyosX11Bridge {
 
         mkdirs(tmpDir);
         mkdirs(logFile.getParentFile());
+        stopDiagnosticLogcat(context, diagnosticPidFile, pidFile, logFile);
         List<Integer> stale = HedgeyosProcessOwner.stopRecordedAndMatching(pidFile, "hedgeyos-x11");
         if (!stale.isEmpty()) {
             appendLog(context, logFile, "Stopped owned stale X11 processes: " + stale);
@@ -74,7 +80,18 @@ final class HedgeyosX11Bridge {
         builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
         builder.environment().put("CLASSPATH", context.getPackageCodePath());
         builder.environment().put("TMPDIR", tmpDir.getAbsolutePath());
-        builder.environment().put("TERMUX_X11_DEBUG", "1");
+        boolean diagnostic = configureDebugEnvironment(
+            builder.environment(),
+            BuildConfig.HEDGEYOS_X11_DEBUG,
+            requestedMode == HedgeyosX11DiagnosticState.SessionMode.DIAGNOSTIC);
+        if (diagnostic) {
+            builder.environment().put(
+                "HEDGEYOS_X11_DIAGNOSTIC_PID_FILE",
+                diagnosticPidFile.getAbsolutePath());
+        } else {
+            builder.environment().remove("HEDGEYOS_X11_DIAGNOSTIC_PID_FILE");
+            HedgeyosProcessOwner.clear(diagnosticPidFile);
+        }
         File xkbConfigRoot = new File(context.getFilesDir(), "debian/usr/share/X11/xkb");
         if (xkbConfigRoot.isDirectory()) {
             builder.environment().put("XKB_CONFIG_ROOT", xkbConfigRoot.getAbsolutePath());
@@ -86,6 +103,7 @@ final class HedgeyosX11Bridge {
         appendLog(context, logFile, "Command: " + command);
         appendLog(context, logFile, "TMPDIR=" + tmpDir.getAbsolutePath());
         appendLog(context, logFile, "XKB_CONFIG_ROOT=" + builder.environment().get("XKB_CONFIG_ROOT"));
+        appendLog(context, logFile, "X11 session mode=" + (diagnostic ? "DIAGNOSTIC" : "NORMAL"));
         Process process = builder.start();
         synchronized (LOCK) {
             sX11Process = process;
@@ -117,7 +135,8 @@ final class HedgeyosX11Bridge {
         }
     }
 
-    static void stopServer(Context context, File pidFile, File logFile) {
+    static void stopServer(Context context, File pidFile, File diagnosticPidFile, File logFile) {
+        stopDiagnosticLogcat(context, diagnosticPidFile, pidFile, logFile);
         Process processToStop = null;
         synchronized (LOCK) {
             if (sX11Process != null) {
@@ -140,6 +159,19 @@ final class HedgeyosX11Bridge {
         if (!stopped.isEmpty()) {
             appendLog(context, logFile, "Stopped owned X11 processes: " + stopped);
         }
+        HedgeyosProcessOwner.clear(diagnosticPidFile);
+    }
+
+    static boolean configureDebugEnvironment(Map<String, String> environment,
+                                             boolean diagnosticBuild,
+                                             boolean oneShotDiagnostic) {
+        boolean diagnostic = diagnosticBuild || oneShotDiagnostic;
+        if (diagnostic) {
+            environment.put("TERMUX_X11_DEBUG", "1");
+        } else {
+            environment.remove("TERMUX_X11_DEBUG");
+        }
+        return diagnostic;
     }
 
     static void openSurface(Context context) {
@@ -147,6 +179,14 @@ final class HedgeyosX11Bridge {
         intent.setClassName(context.getPackageName(), "com.termux.x11.HedgeyosHomeActivity");
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
+    }
+
+    private static void stopDiagnosticLogcat(Context context, File diagnosticPidFile,
+                                             File x11PidFile, File logFile) {
+        if (HedgeyosProcessOwner.stopRecordedOwnedChild(diagnosticPidFile, x11PidFile)) {
+            appendLog(context, logFile, "Stopped recorded owned X11 diagnostic logcat child.");
+        }
+        HedgeyosProcessOwner.clear(diagnosticPidFile);
     }
 
     private static void appendLog(File file, String text) {

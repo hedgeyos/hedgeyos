@@ -1,0 +1,6 @@
+# package-name	required-version	architecture	migration-generation	sha256	filename	reason
+liblua5.1-0	5.1.5-11	arm64	window-policy-v1	d70ec396d05c96d73098a16802bea1d2066497bc32eb2e83244d3b1777e84590	liblua5.1-0_5.1.5-11_arm64.deb	devilspie2 runtime dependency for portrait window policy
+devilspie2	0.43-5+b2	arm64	window-policy-v1	2ea89d74d57b29867bc32bede9c7e702a4412db884974513e86a2754724a23a6	devilspie2_0.43-5+b2_arm64.deb	portrait-safe XFCE window policy
+libdav1d7	1.5.1-1	arm64	gtk-svg-loader-v1	bcb430fa4c5f05bc3fa4dd9f18b7b0498ec9701c23e83bf57a29996216c3a245	libdav1d7_1.5.1-1_arm64.deb	librsvg2-2 dependency absent from the published alpha.4 rootfs
+librsvg2-2	2.60.0+dfsg-1	arm64	gtk-svg-loader-v1	901ba3daba9f7d634680b02e6359e2218fb9929b6eb216ca592efd7cb2b43f06	librsvg2-2_2.60.0+dfsg-1_arm64.deb	SVG renderer runtime required by librsvg2-common
+librsvg2-common	2.60.0+dfsg-1	arm64	gtk-svg-loader-v1	01fe097badb95a87703d1525fdabdea54ae1bedd62571f739447818adb5db4b1	librsvg2-common_2.60.0+dfsg-1_arm64.deb	GDK-Pixbuf SVG loader for GTK symbolic assets

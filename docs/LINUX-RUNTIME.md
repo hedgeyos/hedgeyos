@@ -27,6 +27,7 @@ Android app-private storage owns this ephemeral runtime tree:
   processes/            0700
     desktop.pid
     x11.pid
+    x11-diagnostic-logcat.pid
 ```
 
 `tmp`, `shm`, and `run` are deleted and recreated before a new desktop session.
@@ -80,6 +81,23 @@ HedgeyOS does not emulate a system D-Bus daemon. Software that strictly
 requires `/run/dbus/system_bus_socket` can remain unsupported under
 unprivileged PRoot.
 
+Normal sessions explicitly remove `TERMUX_X11_DEBUG`; setting it to `0` is
+incorrect because upstream Termux:X11 tests only whether the variable exists.
+The existing process stdout/stderr redirect to `desktop.log` remains active in
+normal mode.
+
+`Start X11 Diagnostic Session` warns about the performance cost and requests
+one diagnostic restart in process memory. The request is consumed before X11
+starts and is not stored in preferences, so the following normal restart, an
+Android force-stop, or a process crash cannot leave it enabled. Explicit
+diagnostic builds may instead set `HEDGEYOS_X11_DEBUG=1`; release, CI, and
+normal local builds default to `0`.
+
+Diagnostic cleanup never scans for arbitrary logcat processes. The native X11
+launcher records its actual child PID, native waiter threads reap exited
+children, and Android cleanup requires the same app UID, the recorded X11
+parent PID, and exact `logcat --pid <x11-pid>` arguments.
+
 ## Runtime Preflight
 
 Every desktop start runs
@@ -98,6 +116,10 @@ Checks cover:
 - `memfd_create` when the Android kernel permits it.
 - Creation of a private session D-Bus.
 - Presence or absence of a system D-Bus socket.
+- Presence of `libpixbufloader_svg.so` and its active loader-cache entry.
+- Real GDK-Pixbuf decoding of a deterministic SVG, Adwaita symbolic icon,
+  checked menu indicator, and ordinary PNG.
+- Current X11 session mode, `NORMAL` or `DIAGNOSTIC`.
 
 Result classes are:
 
@@ -115,8 +137,8 @@ resolve to `/tmp/.X11-unix/X1`.
 Android code parses the same report into `LinuxRuntimeCapabilities`. Call
 `HedgeyosRuntimeManager.getLinuxRuntimeCapabilities(context)` to inspect
 writable temporary storage, POSIX and System V shared memory, memfd, D-Bus,
-procfs visibility, X11, and structured compatibility warnings without parsing
-display text.
+procfs visibility, X11, GTK SVG loader/cache/decode status, diagnostic mode,
+and structured compatibility warnings without parsing display text.
 
 ## Process Ownership
 
@@ -134,6 +156,8 @@ On stop or restart, a recorded PID is acted on only when:
 - Desktop PRoot includes the exact bundled PRoot path, exact rootfs path, and
   `--kill-on-exit`.
 - X11 identifies itself as `hedgeyos-x11`.
+- A diagnostic logcat child has the recorded X11 PID as `PPid` and exact
+  `logcat --pid <x11-pid>` argv.
 
 The same exact signatures are scanned to recover an orphan left by an older
 app process. HedgeyOS no longer kills processes by broad names such as
@@ -144,7 +168,10 @@ app process. HedgeyOS no longer kills processes by broad names such as
 These files are the rebuildable Linux runtime surface:
 
 - `rootfs/runtime-assets/hedgeyos-linux/hedgeyos-runtime-preflight`
+- `rootfs/runtime-assets/hedgeyos-linux/hedgeyos-gtk-asset-smoke`
 - `rootfs/runtime-assets/hedgeyos-linux/hedgeyos-start-desktop`
+- `rootfs/runtime-assets/hedgeyos-linux/migration-packages.tsv`
+- `rootfs/runtime-assets/hedgeyos-linux/packages/`
 - `rootfs/customizations.tsv`
 
 The manifest installs both helpers as root-owned mode `0755`. Android also
@@ -157,13 +184,14 @@ upgrading does not require deleting Debian or installed applications.
 1. Make generic runtime argument changes in `HedgeyosGuestRuntime`; do not
    assemble another PRoot argument list in an activity, service, or app
    launcher.
-2. Make guest preflight or XFCE startup changes in the two versioned Linux
+2. Make guest preflight or XFCE startup changes in the versioned Linux
    assets, not in ad hoc Java shell strings.
 3. Keep their owner, mode, and destination rows current in
    `rootfs/customizations.tsv`.
 4. Update this document whenever paths, modes, bind order, severity, ownership,
    or kernel limitations change.
-5. Run `./scripts/test-linux-runtime.sh` and the Android unit suite.
+5. Run `./scripts/test-linux-runtime.sh`,
+   `./scripts/test-linux-migrations.sh`, ShellCheck, and the Android unit suite.
    The tests cover bind order, guest UID environment selection, directory
    modes, ephemeral cleanup, atomic state replacement, capability parsing, and
    exact same-UID process validation.

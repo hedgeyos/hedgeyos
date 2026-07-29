@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+REPO_ROOT=$(CDPATH='' cd -- "$SCRIPT_DIR/.." && pwd)
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/build/rootfs}"
 MANIFEST_DIR="$REPO_ROOT/rootfs/manifests"
 ROOTFS_NAME="debian-trixie-arm64-rootfs.tar.zst"
@@ -10,11 +10,13 @@ ROOTFS_OUT="$OUT_DIR/$ROOTFS_NAME"
 ROOTFS_TREE="$OUT_DIR/debian-trixie-arm64-rootfs"
 ROOTFS_TAR="$OUT_DIR/debian-trixie-arm64-rootfs.tar"
 ROOTFS_TMP="$ROOTFS_OUT.tmp"
-MIGRATION_ASSET_DIR="$REPO_ROOT/app/src/main/assets/hedgeyos-linux/packages"
+MIGRATION_ASSET_DIR="$REPO_ROOT/rootfs/runtime-assets/hedgeyos-linux/packages"
+MIGRATION_MANIFEST="$REPO_ROOT/rootfs/runtime-assets/hedgeyos-linux/migration-packages.tsv"
+PUBLISHED_BASELINE_STATUS="$REPO_ROOT/rootfs/baselines/v0.1.0-alpha.4-dpkg-status"
 APT_SNAPSHOT="${APT_SNAPSHOT:-}"
 DEBIAN_KEYRING="${DEBIAN_KEYRING:-/usr/share/keyrings/debian-archive-keyring.gpg}"
 
-PACKAGES="bash,coreutils,apt,ca-certificates,sudo,curl,wget,git,nano,less,procps,psmisc,iproute2,python3,build-essential,dbus,dbus-x11,xfce4,xfce4-terminal,thunar,xterm,devilspie2,fonts-dejavu,adwaita-icon-theme"
+PACKAGES="bash,coreutils,apt,ca-certificates,sudo,curl,wget,git,nano,less,procps,psmisc,iproute2,python3,build-essential,dbus,dbus-x11,xfce4,xfce4-terminal,thunar,xterm,devilspie2,fonts-dejavu,adwaita-icon-theme,librsvg2-common"
 
 command -v mmdebstrap >/dev/null 2>&1 || {
     echo "mmdebstrap is required to build the Debian rootfs." >&2
@@ -83,8 +85,13 @@ else
         "$PRIMARY_SOURCE"
 fi
 
-"$SCRIPT_DIR/verify-migration-packages.sh" "$ROOTFS_TREE" "$MIGRATION_ASSET_DIR"
 "$SCRIPT_DIR/configure-rootfs.sh" "$ROOTFS_TREE"
+"$SCRIPT_DIR/verify-gtk-svg.sh" "$ROOTFS_TREE" "$OUT_DIR/gtk-asset-smoke.txt"
+"$SCRIPT_DIR/verify-migration-packages.sh" \
+    "$ROOTFS_TREE" \
+    "$MIGRATION_ASSET_DIR" \
+    "$MIGRATION_MANIFEST" \
+    "$PUBLISHED_BASELINE_STATUS"
 mkdir -p "$ROOTFS_TREE/dev" "$ROOTFS_TREE/proc" "$ROOTFS_TREE/sys"
 
 chown -R 0:0 "$ROOTFS_TREE"
@@ -127,7 +134,12 @@ updates_source=$UPDATES_SOURCE
 security_source=$SECURITY_SOURCE
 debian_keyring_sha256=$DEBIAN_KEYRING_SHA256
 packages=$PACKAGES
+gtk_svg_loader_package=librsvg2-common
+gtk_svg_runtime_package=librsvg2-2
+gtk_svg_smoke=PASS
 migration_packages=$(find "$MIGRATION_ASSET_DIR" -maxdepth 1 -type f -name '*.deb' -printf '%f ' | sort)
+migration_manifest_sha256=$(sha256sum "$MIGRATION_MANIFEST" | awk '{ print $1 }')
+migration_baseline=v0.1.0-alpha.4
 android_extractable=true
 archive_excludes=./dev/*
 archive_hardlinks=dereferenced

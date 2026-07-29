@@ -37,6 +37,14 @@ Current repository state:
   `/tmp`, `/run`, and `/dev/shm` tree is reset between desktop sessions.
 - `HedgeyosProcessOwner` records and validates exact same-UID desktop and X11
   process identities. Stop and restart do not use broad process-name matching.
+- Normal builds and sessions remove the presence-sensitive
+  `TERMUX_X11_DEBUG` variable. `HEDGEYOS_X11_DEBUG=1` is reserved for explicit
+  diagnostic builds; the launcher also offers a warned, in-memory one-shot
+  diagnostic restart that cannot persist across an app-process crash.
+- Diagnostic X11 logcat records the actual child PID. Cleanup requires the
+  recorded X11 parent PID, matching Android UID, exact parent relationship, and
+  exact `logcat --pid <x11-pid>` argv. Vendored native wait threads reap both
+  X11 diagnostic logcat children.
 - Linux runtime preflight results are atomically exported to
   `linux-runtime-report.txt` and exposed through the hedgehog controls.
 - `HedgeyosX11Bridge` starts `com.termux.x11.CmdEntryPoint` through Android
@@ -53,6 +61,14 @@ Current repository state:
   `rootfs/runtime-assets/hedgeyos-linux`, declared by
   `rootfs/customizations.tsv`, seeded into fresh rootfs builds, and packaged in
   the APK for versioned migration.
+- Offline Debian repair is driven by
+  `rootfs/runtime-assets/hedgeyos-linux/migration-packages.tsv`. Each
+  checksum-pinned package belongs to a durable generation marker under
+  `/var/lib/hedgeyos/migrations`; interrupted generations retry before XFCE,
+  while completed generations are skipped.
+- Fresh rootfs builds include `librsvg2-common` and its exact Trixie
+  dependencies. The build runs real GDK-Pixbuf decoding of a deterministic SVG,
+  an Adwaita symbolic icon and check indicator, and an ordinary PNG.
 - Versioned XFCE defaults identify the Applications plugin by its canonical
   `applicationsmenu` type, give it a compact hedgehog-only button, and enable
   native single-click desktop launchers.

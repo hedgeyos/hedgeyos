@@ -8,6 +8,7 @@
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
 #include <errno.h>
 #include <jni.h>
 #include <android/looper.h>
@@ -24,6 +25,18 @@
 
 extern volatile int conn_fd; // The only variable from shared with X server code.
 bool lorieDebugEnabled = false;
+
+static void* reapLogcatChild(void* argument) {
+    pid_t pid = (pid_t) (intptr_t) argument;
+    while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) {}
+    return NULL;
+}
+
+static void startLogcatChildReaper(pid_t pid) {
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, reapLogcatChild, (void*) (intptr_t) pid) == 0)
+        pthread_detach(thread);
+}
 
 static struct {
     jclass self;
@@ -251,7 +264,8 @@ static void startLogcat(JNIEnv *env, __unused jobject cls, jint fd) {
     log(DEBUG, "Starting logcat with output to given fd");
     lorieDebugEnabled = true;
 
-    switch(fork()) {
+    pid_t pid = fork();
+    switch(pid) {
         case -1:
             log(ERROR, "fork: %s", strerror(errno));
             return;
@@ -264,6 +278,9 @@ static void startLogcat(JNIEnv *env, __unused jobject cls, jint fd) {
             execl("/system/bin/logcat", "logcat", buf, NULL);
             log(ERROR, "exec logcat: %s", strerror(errno));
             (*env)->FatalError(env, "Exiting");
+            return;
+        default:
+            startLogcatChildReaper(pid);
     }
 }
 

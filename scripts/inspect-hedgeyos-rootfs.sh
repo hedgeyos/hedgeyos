@@ -19,11 +19,15 @@ command -v tar >/dev/null 2>&1 || fail "tar is required"
 mkdir -p "$OUT_DIR"
 LISTING="$OUT_DIR/rootfs-listing.txt"
 zstd -dc "$ARCHIVE" | tar --numeric-owner -tvf - > "$LISTING"
+STATUS="$OUT_DIR/dpkg-status"
+zstd -dc "$ARCHIVE" | tar -xOf - ./var/lib/dpkg/status > "$STATUS"
 
 grep -Fq " ./usr/local/libexec/hedgeyos-apply-defaults" "$LISTING" ||
     fail "missing versioned defaults helper"
 grep -Fq " ./usr/local/libexec/hedgeyos-runtime-preflight" "$LISTING" ||
     fail "missing Linux runtime preflight"
+grep -Fq " ./usr/local/libexec/hedgeyos-gtk-asset-smoke" "$LISTING" ||
+    fail "missing GTK asset smoke helper"
 grep -Fq " ./usr/local/libexec/hedgeyos-start-desktop" "$LISTING" ||
     fail "missing Linux desktop startup helper"
 grep -Fq " ./etc/xdg/autostart/hedgeyos-window-rules.desktop" "$LISTING" ||
@@ -38,12 +42,47 @@ grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-apply-defaults$' "$L
     fail "defaults helper ownership or mode is wrong"
 grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-runtime-preflight$' "$LISTING" ||
     fail "runtime preflight ownership or mode is wrong"
+grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-gtk-asset-smoke$' "$LISTING" ||
+    fail "GTK asset smoke helper ownership or mode is wrong"
 grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-start-desktop$' "$LISTING" ||
     fail "desktop startup helper ownership or mode is wrong"
 grep -Eq '^-rwxr-xr-x +1000/1000 +.* ./home/hedgeyos/Desktop/Terminal.desktop$' "$LISTING" ||
     fail "desktop launcher ownership or mode is wrong"
 grep -Fq "devilspie2" "$PROVENANCE" ||
     fail "rootfs provenance does not include devilspie2"
+grep -Fq "librsvg2-common" "$PROVENANCE" ||
+    fail "rootfs provenance does not include librsvg2-common"
+grep -Fq "gtk_svg_smoke=PASS" "$PROVENANCE" ||
+    fail "rootfs provenance does not record successful GTK SVG decoding"
+grep -Fq "libpixbufloader_svg.so" "$LISTING" ||
+    fail "rootfs archive is missing libpixbufloader_svg.so"
+grep -Fq "gdk-pixbuf-2.0/2.10.0/loaders.cache" "$LISTING" ||
+    fail "rootfs archive is missing the active GDK-Pixbuf loader cache"
+for package_name in librsvg2-common librsvg2-2; do
+    awk -v package_name="$package_name" '
+        BEGIN { RS = "" }
+        $0 ~ ("^Package: " package_name "\n") &&
+            $0 ~ "\nStatus: install ok installed(\n|$)" {
+            found = 1
+        }
+        END { exit found ? 0 : 1 }
+    ' "$STATUS" || fail "$package_name is not installed in the rootfs package database"
+done
+
+loader_cache_path=$(awk \
+    '$NF ~ /gdk-pixbuf-2.0\/2.10.0\/loaders.cache$/ { print $NF; exit }' \
+    "$LISTING")
+[ -n "$loader_cache_path" ] || fail "could not locate loader cache in archive"
+zstd -dc "$ARCHIVE" | tar -xOf - "$loader_cache_path" > "$OUT_DIR/loaders.cache"
+grep -Fq 'libpixbufloader_svg.so' "$OUT_DIR/loaders.cache" ||
+    fail "archived loader cache does not contain libpixbufloader_svg.so"
+grep -Fq '"svg"' "$OUT_DIR/loaders.cache" ||
+    fail "archived loader cache does not advertise SVG"
+
+grep -Fq " ./var/lib/hedgeyos/migrations/window-policy-v1" "$LISTING" ||
+    fail "fresh rootfs is missing the window-policy migration marker"
+grep -Fq " ./var/lib/hedgeyos/migrations/gtk-svg-loader-v1" "$LISTING" ||
+    fail "fresh rootfs is missing the GTK SVG migration marker"
 ! grep -Eiq "vnc|tigervnc|x11vnc|novnc|xrdp" "$PROVENANCE" ||
     fail "rootfs provenance contains VNC/RDP packages"
 

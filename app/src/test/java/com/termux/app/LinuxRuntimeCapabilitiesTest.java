@@ -20,6 +20,10 @@ public class LinuxRuntimeCapabilitiesTest {
                 "WARNING|system-dbus|not provided under PRoot\n" +
                 "WARNING|inotify|UNSUPPORTED_BY_ANDROID_PROCFS\n" +
                 "PASS|x11|X1 is available\n" +
+                "PASS|gtk-svg-loader|loader is installed\n" +
+                "PASS|gtk-svg-cache|cache contains SVG\n" +
+                "PASS|gtk-svg-decode|decode passed\n" +
+                "PASS|x11-diagnostic|OFF (NORMAL session)\n" +
                 "summary=PASS fatal=0\n");
 
         Assert.assertTrue(capabilities.reportAvailable);
@@ -35,8 +39,15 @@ public class LinuxRuntimeCapabilitiesTest {
         Assert.assertFalse(capabilities.systemDbus);
         Assert.assertFalse(capabilities.procSysctlVisibility);
         Assert.assertTrue(capabilities.x11Socket);
+        Assert.assertTrue(capabilities.gtkSvgLoader);
+        Assert.assertTrue(capabilities.gtkSvgLoaderCache);
+        Assert.assertTrue(capabilities.gtkSvgDecode);
+        Assert.assertEquals("NORMAL", capabilities.x11SessionMode);
         Assert.assertEquals(3, capabilities.warnings.size());
         Assert.assertTrue(capabilities.toDisplayText().contains("Overall: PASS"));
+        Assert.assertTrue(capabilities.toDisplayText().contains("GTK SVG loader: PASS"));
+        Assert.assertTrue(capabilities.toDisplayText().contains("GTK SVG decode: PASS"));
+        Assert.assertTrue(capabilities.toDisplayText().contains("X11 diagnostic mode: OFF"));
     }
 
     @Test
@@ -46,5 +57,16 @@ public class LinuxRuntimeCapabilitiesTest {
         Assert.assertFalse(capabilities.reportAvailable);
         Assert.assertFalse(capabilities.passed);
         Assert.assertTrue(capabilities.toDisplayText().contains("No Linux runtime report"));
+    }
+
+    @Test
+    public void diagnosticSessionIsReportedAsWarningAndOn() {
+        LinuxRuntimeCapabilities capabilities = LinuxRuntimeCapabilities.parse(
+            "WARNING|x11-diagnostic|ON (DIAGNOSTIC session)\n" +
+                "summary=PASS fatal=0\n");
+
+        Assert.assertEquals("DIAGNOSTIC", capabilities.x11SessionMode);
+        Assert.assertTrue(capabilities.toDisplayText().contains("X11 diagnostic mode: ON"));
+        Assert.assertEquals(1, capabilities.warnings.size());
     }
 }

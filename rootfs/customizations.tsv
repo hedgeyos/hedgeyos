@@ -1,6 +1,8 @@
 # source	target	owner	mode	policy
 hedgeyos-linux/hedgeyos-apply-defaults	/usr/local/libexec/hedgeyos-apply-defaults	0:0	0755	replace-system
 hedgeyos-linux/hedgeyos-runtime-preflight	/usr/local/libexec/hedgeyos-runtime-preflight	0:0	0755	replace-system
+hedgeyos-linux/hedgeyos-gtk-asset-smoke	/usr/local/libexec/hedgeyos-gtk-asset-smoke	0:0	0755	replace-system
+hedgeyos-linux/migration-packages.tsv	/usr/share/hedgeyos/migration-packages.tsv	0:0	0644	replace-system
 hedgeyos-linux/hedgeyos-start-desktop	/usr/local/libexec/hedgeyos-start-desktop	0:0	0755	replace-system
 hedgeyos-linux/hedgeyos-window-rules.desktop	/etc/xdg/autostart/hedgeyos-window-rules.desktop	0:0	0644	replace-system
 hedgeyos-linux/hedgeyos-window-rules.lua	/etc/hedgeyos/devilspie2/hedgeyos-window-rules.lua	0:0	0644	replace-system

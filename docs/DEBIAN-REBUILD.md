@@ -13,7 +13,10 @@ must remain reproducible from source files in this repository.
 - `rootfs/customizations.tsv`: destination, numeric owner, mode, and policy for
   every hedgeyos Linux asset.
 - `rootfs/runtime-assets/hedgeyos-linux/`: XFCE defaults, branding, desktop
-  startup, runtime preflight, window rules, and terminal launcher.
+  startup, runtime preflight, GTK decode smoke test, migration manifest and
+  packages, window rules, and terminal launcher.
+- `rootfs/baselines/v0.1.0-alpha.4-dpkg-status`: exact package database used to
+  prove the currently published baseline's offline migration closure.
 - `app/src/main/java/com/termux/app/HedgeyosRuntimeManager.java`: Android
   extraction health checks, rootfs asset name, migrations, and existing-rootfs
   asset refresh.
@@ -30,7 +33,8 @@ a second hand-copied version under `app/src/main/assets`.
 A new Debian base must preserve all of these behaviors:
 
 - ARM64 Debian with APT, sudo, networking, Git, Python, build tools, XFCE,
-  xfce4-terminal, Thunar, xterm, fonts, icons, D-Bus, and `devilspie2`.
+  xfce4-terminal, Thunar, xterm, fonts, icons, D-Bus, `devilspie2`, and
+  `librsvg2-common`.
 - Debian system files archived as numeric owner `0:0`.
 - `/home/hedgeyos` archived as `1000:1000`.
 - `/usr/bin/sudo` mode `4755`, `/etc/sudoers` and the hedgeyos sudoers fragment
@@ -42,13 +46,15 @@ A new Debian base must preserve all of these behaviors:
   `/run/lock` mode `1777`; per-user runtime directories mode `0700`.
 - PRoot options and bind order remain centralized in `HedgeyosGuestRuntime`.
 - The preflight verifies POSIX shared memory, memfd, System V shared memory,
-  D-Bus, procfs, sysfs, and X11. Interactive `DISPLAY=:1.0` and startup
+  D-Bus, procfs, sysfs, X11, SVG loader/cache registration, and real GTK asset
+  decoding. Interactive `DISPLAY=:1.0` and startup
   `DISPLAY=:1` must both resolve to `/tmp/.X11-unix/X1`.
 - XFCE keeps the hedgeyos wallpaper, storybook theme, hedgehog-only menu,
   terminal-only desktop, single-click launch, left-side window controls,
   portrait sizing, and maximized primary applications.
 - Existing installations receive idempotent runtime/default updates without a
-  Debian reset.
+  Debian reset. Offline package repairs use generation-specific durable markers
+  and block desktop startup until post-install verification succeeds.
 
 ## Rebase Checklist
 
@@ -70,15 +76,25 @@ A new Debian base must preserve all of these behaviors:
 
 8. Review every package in `PACKAGES`. Confirm renamed, removed, or split
    packages before changing the list.
-9. Rebuild the two offline migration packages under
-   `app/src/main/assets/hedgeyos-linux/packages` from the selected Debian base.
-   Run `rootfs/verify-migration-packages.sh`; do not reuse packages from an
-   incompatible suite.
-10. Apply every hedgeyos file through `rootfs/customizations.tsv`. Add a row
+9. Compare the published baseline dpkg database with the newly built rootfs.
+   Resolve the dependency graph of every new required package; do not guess
+   closure members. Update the canonical manifest and `.deb` files under
+   `rootfs/runtime-assets/hedgeyos-linux`, including exact version,
+   architecture, generation, reason, filename, and SHA-256.
+10. Run `rootfs/verify-migration-packages.sh`. It requires a one-to-one
+    manifest/directory match, accepts only `arm64` or valid `all` packages,
+    checks the new rootfs versions, and validates closure against the published
+    baseline with Debian's dependency parser.
+11. When GTK remains part of the desktop, verify `librsvg2-common`,
+    `librsvg2-2`, `libpixbufloader_svg.so`, the architecture-specific
+    query-loader, loader cache, and actual SVG/symbolic/checkmark/PNG decoding.
+    Prefer Debian triggers; do not regenerate the cache merely because its
+    command is not on the default `PATH`.
+12. Apply every hedgeyos file through `rootfs/customizations.tsv`. Add a row
     whenever a new Linux asset is introduced.
-11. Increment the defaults migration version in
+13. Increment the defaults migration version in
     `hedgeyos-apply-defaults` when existing installations need new XFCE values.
-12. Update Android's existing-rootfs refresh list in `ensureLinuxBranding()` if
+14. Update Android's existing-rootfs refresh list in `ensureLinuxBranding()` if
     a new replaceable system asset is added.
 
 ## Build And Inspect
@@ -99,6 +115,8 @@ sudo env \
 
 ./scripts/test-linux-defaults.sh
 ./scripts/test-linux-runtime.sh
+./scripts/test-linux-migrations.sh
+shellcheck rootfs/*.sh scripts/test-linux-*.sh
 ```
 
 Then copy the generated archive and checksum into APK assets, or let CI do so,
