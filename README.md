@@ -97,7 +97,9 @@ within thumb reach.
 
 ## Screenshots
 
-![HedgeyOS themed XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.2/hedgeyos-alpha.2-fresh-desktop.png)
+![HedgeyOS alpha.5 themed XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.5/hedgeyos-alpha.5-desktop.png)
+
+![HedgeyOS alpha.5 terminal](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.5/hedgeyos-alpha.5-terminal.png)
 
 ![HedgeyOS first launch](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-first-load.gif)
 

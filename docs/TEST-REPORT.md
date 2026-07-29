@@ -2,21 +2,19 @@
 
 Date: 2026-07-30
 
-Current status: `v0.1.0-alpha.4` is a published, test-signed GitHub
-prerelease. It contains Phase 1 of the Android and Debian performance/stability
-work and is not the final production-signed `v0.1.0` release. The X11 debug
-and GTK SVG fixes below are an unpublished alpha.5 development candidate; this
-work does not tag, publish, or merge a release.
+Current status: `v0.1.0-alpha.5` is a published, test-signed GitHub
+prerelease. It contains the confirmed X11 diagnostic-overhead and GTK SVG
+runtime fixes below and is not the final production-signed `v0.1.0` release.
 
 Release:
 
-- URL: <https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.4>
-- APK: `hedgeyos-arm64-v8a-alpha.4-test-signed.apk`
-- Version: `0.1.0-alpha.4`
-- Version code: `4`
-- APK size: 262,136,122 bytes
+- URL: <https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.5>
+- APK: `hedgeyos-arm64-v8a-alpha.5-test-signed.apk`
+- Version: `0.1.0-alpha.5`
+- Version code: `5`
+- APK size: 267,281,395 bytes
 - APK SHA-256:
-  `44865100049105dfd29dadce413ed45715685aa4c80c0dc68444793f09458321`
+  `76eb866c89e5efcbf7d65e2f312fa237b5db2d50c08c8b307cf872bcd627a298`
 - Test signing certificate SHA-256:
   `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`
 - `apksigner verify --verbose`: v2 and v3 signatures verified.
@@ -32,7 +30,7 @@ Device:
 `scripts/inspect-hedgeyos-apk.sh` passed against the signed release candidate:
 
 ```text
-sha256=44865100049105dfd29dadce413ed45715685aa4c80c0dc68444793f09458321
+sha256=76eb866c89e5efcbf7d65e2f312fa237b5db2d50c08c8b307cf872bcd627a298
 package=org.hedgeyos
 launcher=com.termux.x11.HedgeyosHomeActivity
 fallback_home_activity_enabled=false
@@ -46,16 +44,21 @@ power_protection=wake_lock_and_battery_setup
 overlay_asset=drawable/hedgeyos_companion
 linux_menu_icon=assets/hedgeyos-linux/hedgeyos-menu.png
 linux_defaults=assets/hedgeyos-linux/hedgeyos-apply-defaults
+linux_runtime_preflight=assets/hedgeyos-linux/hedgeyos-runtime-preflight
+linux_gtk_asset_smoke=assets/hedgeyos-linux/hedgeyos-gtk-asset-smoke
+linux_migration_manifest=assets/hedgeyos-linux/migration-packages.tsv
+linux_desktop_startup=assets/hedgeyos-linux/hedgeyos-start-desktop
 vnc_files=absent_in_apk_listing
 ```
 
 The rebuilt Debian rootfs also passed
 `scripts/inspect-hedgeyos-rootfs.sh`.
 
-- Compressed size: 221,639,012 bytes
+- Compressed size: 223,940,166 bytes
 - SHA-256:
-  `238b0e9cbb682a588e6428a0a51bbe687c26ee6e53bbd6ef06d93c9fde5e540c`
+  `c9858719da4ddc64e3aa74a55b21acff9eb1cf80ce6a8a9562570a3d4162dbbc`
 - Required portrait-window package: `devilspie2`
+- Required GTK SVG loader package: `librsvg2-common`
 - Declarative customization manifest:
   `rootfs/customizations.tsv`
 
