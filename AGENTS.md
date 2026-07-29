@@ -34,14 +34,14 @@ Surface.
 
 - Repository: `https://github.com/hedgeyos/hedgeyos`
 - Branch: `master`
-- Current Android version: `versionCode 2`, `versionName 0.1.0-alpha.2`
+- Current Android version: `versionCode 3`, `versionName 0.1.0-alpha.3`
 - Published prerelease:
-  `https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.2`
+  `https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.3`
 - Published APK:
-  `hedgeyos-arm64-v8a-alpha.2-test-signed.apk`
+  `hedgeyos-arm64-v8a-alpha.3-test-signed.apk`
 - Published APK SHA-256:
-  `50384775976d9f1475634b01d440732d677157b6471e3e1231f2ee27ae856ccd`
-- Release source: tag `v0.1.0-alpha.2`
+  `091a2a4788f60b0e9ea3c88ba68328579f2116df173e849e108e8367739d7c3d`
+- Release source: tag `v0.1.0-alpha.3`
 
 The latest local APK inspection records:
 
@@ -78,7 +78,7 @@ the architecture:
   `scripts/build-proot-payload.sh` remains the explicit maintainer refresh path.
 - `aapt dump badging` lists disabled launcher candidates. The CI inspection
   script now validates the relevant manifest activity blocks directly.
-- `v0.1.0-alpha.2` currently uses `versionCode 2`. Future prereleases must bump
+- `v0.1.0-alpha.3` currently uses `versionCode 3`. Future prereleases must bump
   `versionCode` before they can update this APK in place.
 - Command-line `pm install` from Termux on the phone hit Android app-UID/FUSE
   restrictions. That is not evidence that normal Android UI install fails.

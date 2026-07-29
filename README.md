@@ -2,9 +2,9 @@
 
 Turn an Android phone into a Debian graphical workstation and Home launcher.
 
-[Download hedgeyos v0.1.0-alpha.2 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.2/hedgeyos-arm64-v8a-alpha.2-test-signed.apk)
+[Download hedgeyos v0.1.0-alpha.3 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.3/hedgeyos-arm64-v8a-alpha.3-test-signed.apk)
 
-Current status: `v0.1.0-alpha.2` is published as a GitHub prerelease and has
+Current status: `v0.1.0-alpha.3` is published as a GitHub prerelease and has
 device smoke-test evidence on an attached ARM64 phone. The alpha boots into the
 bundled Debian 13/XFCE desktop as the Android Home screen, starts embedded
 Termux:X11 from inside the hedgeyos APK, opens Debian desktop apps, exposes the
@@ -25,6 +25,10 @@ hedgehog control, terminal-focused XFCE defaults, and portrait-safe window
 placement. The remaining optimization phases are recorded in
 [`docs/PERFORMANCE-STABILITY-ROADMAP.md`](docs/PERFORMANCE-STABILITY-ROADMAP.md).
 
+Alpha.3 makes Direct touch the default pointer mode, places the soft-keyboard
+button in the always-visible extra-key row, and closes the hedgehog control
+window before opening Android's soft keyboard.
+
 ## What hedgeyos Is
 
 hedgeyos is an experimental, independent Termux-derived Android app. The goal is
@@ -40,13 +44,13 @@ hedgeyos is not affiliated with, endorsed by, or released by the Termux project.
 - Sideloading enabled by the user.
 - Enough free storage for the APK, compressed rootfs, and extracted Debian tree.
 
-Published alpha.2 artifact details:
+Published alpha.3 artifact details:
 
 - Test-signed APK size: 262,111,461 bytes.
 - Bundled Debian rootfs size: 221,639,012 bytes compressed.
 - Bundled PRoot payload size: 114,325 bytes compressed.
 - APK SHA-256:
-  `50384775976d9f1475634b01d440732d677157b6471e3e1231f2ee27ae856ccd`.
+  `091a2a4788f60b0e9ea3c88ba68328579f2116df173e849e108e8367739d7c3d`.
 - Test signing certificate SHA-256:
   `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`.
 
@@ -55,7 +59,7 @@ production-signed artifact.
 
 ## Install
 
-1. Download `hedgeyos-arm64-v8a-alpha.2-test-signed.apk` from the release above.
+1. Download `hedgeyos-arm64-v8a-alpha.3-test-signed.apk` from the release above.
 2. Install it through Android sideloading.
 3. Open hedgeyos from the app icon.
 4. Use Android's Home app chooser when prompted, or tap `Choose Home App`.

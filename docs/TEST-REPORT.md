@@ -2,19 +2,19 @@
 
 Date: 2026-07-29
 
-Current status: `v0.1.0-alpha.2` is a published, test-signed GitHub
+Current status: `v0.1.0-alpha.3` is a published, test-signed GitHub
 prerelease. It contains Phase 1 of the Android and Debian performance/stability
 work and is not the final production-signed `v0.1.0` release.
 
 Release:
 
-- URL: <https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.2>
-- APK: `hedgeyos-arm64-v8a-alpha.2-test-signed.apk`
-- Version: `0.1.0-alpha.2`
-- Version code: `2`
+- URL: <https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.3>
+- APK: `hedgeyos-arm64-v8a-alpha.3-test-signed.apk`
+- Version: `0.1.0-alpha.3`
+- Version code: `3`
 - APK size: 262,111,461 bytes
 - APK SHA-256:
-  `50384775976d9f1475634b01d440732d677157b6471e3e1231f2ee27ae856ccd`
+  `091a2a4788f60b0e9ea3c88ba68328579f2116df173e849e108e8367739d7c3d`
 - Test signing certificate SHA-256:
   `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`
 - `apksigner verify --verbose`: v2 and v3 signatures verified.
@@ -30,7 +30,7 @@ Device:
 `scripts/inspect-hedgeyos-apk.sh` passed against the signed release candidate:
 
 ```text
-sha256=50384775976d9f1475634b01d440732d677157b6471e3e1231f2ee27ae856ccd
+sha256=091a2a4788f60b0e9ea3c88ba68328579f2116df173e849e108e8367739d7c3d
 package=org.hedgeyos
 launcher=com.termux.x11.HedgeyosHomeActivity
 fallback_home_activity_enabled=false
@@ -57,6 +57,24 @@ The rebuilt Debian rootfs also passed
   `rootfs/customizations.tsv`
 
 ## Device Evidence
+
+### Alpha.3 Upgrade And Interaction Checks
+
+Alpha.3 installed over alpha.2 with `adb install -r`. Android retained the
+original hedgeyos install time and Debian data while updating to version code 3.
+
+- Tapping `Toggle Soft Keyboard` dismissed the hedgehog mini-window first and
+  then opened the IME. The post-action hierarchy contained neither the control
+  button nor its close button, while Android reported `mInputShown=true`.
+- The visible extra-key row was `ESC`, `/`, `-`, `HOME`, `UP`, `END`,
+  `KEYBOARD`, `PREFERENCES`; `PGUP` moved to the second row.
+- Pointer settings showed `Direct touch` after the versioned default migration.
+  Switching to Trackpad survived a force-stop and relaunch, proving later user
+  choices are not overwritten; Direct touch was restored after the test.
+- `proot`, `xfce4-session`, and `xfce4-panel` remained live after relaunch, and
+  the `org.hedgeyos:desktop-runtime` partial wake lock was held.
+- The separately installed `com.termux` package remained at version 0.118.3
+  with unchanged install and update timestamps.
 
 ### Existing-Rootfs Upgrade
 
@@ -233,6 +251,6 @@ refresh path.
 
 ## Release Decision
 
-`v0.1.0-alpha.2` is suitable as a public prerelease/test APK. Final `v0.1.0`
+`v0.1.0-alpha.3` is suitable as a public prerelease/test APK. Final `v0.1.0`
 still requires production signing, direct in-app Reset Debian evidence,
 physical-keyboard testing, and broader device coverage.
