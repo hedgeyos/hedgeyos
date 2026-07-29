@@ -18,13 +18,17 @@ import android.widget.TextView;
 
 import com.termux.app.HedgeyosRuntimeManager;
 import com.termux.app.HedgeyosRuntimeService;
+import com.termux.x11.utils.TermuxX11ExtraKeys;
 
 import java.util.Collections;
 import java.util.List;
 
 public final class HedgeyosHomeActivity extends MainActivity {
 
-    private static final int HEDGEYOS_DISPLAY_DEFAULTS_VERSION = 2;
+    private static final int HEDGEYOS_DISPLAY_DEFAULTS_VERSION = 3;
+    private static final String HEDGEYOS_EXTRA_KEYS =
+        "[['ESC','/',{key: '-', popup: '|'},'HOME','UP','END','KEYBOARD','PREFERENCES'], " +
+        "['TAB','CTRL','ALT','LEFT','DOWN','RIGHT','PGDN','PGUP']]";
 
     private final Handler hedgeyosStatusHandler = new Handler(Looper.getMainLooper());
     private final Runnable hedgeyosStatusPoller = new Runnable() {
@@ -185,17 +189,37 @@ public final class HedgeyosHomeActivity extends MainActivity {
             return;
         }
 
-        prefs.displayResolutionMode.put("scaled");
-        prefs.get().edit()
-            .putString("displayResolutionMode", "scaled")
-            .putInt("displayScale", 240)
-            .putBoolean("displayStretch", false)
-            .putBoolean("fullscreen", true)
-            .putBoolean("showAdditionalKbd", true)
-            .putBoolean("additionalKbdVisible", true)
+        String extraKeys = prefs.extra_keys_config.get();
+        boolean usesUpstreamExtraKeys =
+            extraKeys == null || extraKeys.isEmpty() ||
+                TermuxX11ExtraKeys.DEFAULT_IVALUE_EXTRA_KEYS.equals(extraKeys);
+
+        if (appliedVersion < 2) {
+            prefs.displayResolutionMode.put("scaled");
+        }
+        prefs.touchMode.put("3");
+        if (usesUpstreamExtraKeys) {
+            prefs.extra_keys_config.put(HEDGEYOS_EXTRA_KEYS);
+        }
+
+        android.content.SharedPreferences.Editor editor = prefs.get().edit();
+        if (appliedVersion < 2) {
+            editor
+                .putString("displayResolutionMode", "scaled")
+                .putInt("displayScale", 240)
+                .putBoolean("displayStretch", false)
+                .putBoolean("fullscreen", true)
+                .putBoolean("showAdditionalKbd", true)
+                .putBoolean("additionalKbdVisible", true);
+        }
+        editor
+            .putString("touchMode", "3")
             .putBoolean("hedgeyosDisplayDefaultsApplied", true)
-            .putInt("hedgeyosDisplayDefaultsVersion", HEDGEYOS_DISPLAY_DEFAULTS_VERSION)
-            .commit();
+            .putInt("hedgeyosDisplayDefaultsVersion", HEDGEYOS_DISPLAY_DEFAULTS_VERSION);
+        if (usesUpstreamExtraKeys) {
+            editor.putString("extra_keys_config", HEDGEYOS_EXTRA_KEYS);
+        }
+        editor.commit();
         onPreferencesChanged("hedgeyosDisplayDefaultsApplied");
     }
 

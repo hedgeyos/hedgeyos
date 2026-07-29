@@ -206,7 +206,10 @@ final class HedgeyosOverlayController {
         body.addView(actionButton("Restart Desktop", actions::restartDesktop));
         body.addView(actionButton("Stop Desktop", actions::stopDesktop));
         body.addView(actionButton("Reset Debian", actions::resetDebian));
-        body.addView(actionButton("Toggle Soft Keyboard", actions::toggleKeyboard));
+        body.addView(actionButton("Toggle Soft Keyboard", () -> {
+            dismissPopup();
+            content.postDelayed(actions::toggleKeyboard, 150);
+        }));
         body.addView(actionButton("Android Apps", actions::showAndroidApps));
         body.addView(actionButton("Android Settings", actions::openAndroidSettings));
         body.addView(actionButton("Display Settings", actions::openDisplaySettings));
