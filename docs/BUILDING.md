@@ -1,5 +1,9 @@
 # Building hedgeyos
 
+Rebuilding or upgrading the bundled Debian base has additional ownership,
+migration, provenance, and device gates documented in
+[`DEBIAN-REBUILD.md`](DEBIAN-REBUILD.md).
+
 The intended top-level build command is:
 
 ```sh

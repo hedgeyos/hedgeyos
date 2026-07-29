@@ -108,6 +108,9 @@ Result classes are:
 
 Any `FATAL` result exits with code 2 and blocks XFCE startup. Warnings about
 system D-Bus or Android-owned `/proc/sys` entries do not block the desktop.
+The X11 check accepts both display-only values such as `:1` and the
+display-and-screen form used by interactive terminals, such as `:1.0`; both
+resolve to `/tmp/.X11-unix/X1`.
 
 Android code parses the same report into `LinuxRuntimeCapabilities`. Call
 `HedgeyosRuntimeManager.getLinuxRuntimeCapabilities(context)` to inspect
@@ -119,6 +122,10 @@ display text.
 
 HedgeyOS records the exact desktop PRoot and embedded-X11 process identities
 under `linux-runtime/processes`. State files are written atomically.
+
+Ephemeral cleanup checks paths without following symlinks. This matters for
+X11 authority links whose temporary target has already disappeared: a broken
+link still occupies its parent directory and must be deleted during restart.
 
 On stop or restart, a recorded PID is acted on only when:
 

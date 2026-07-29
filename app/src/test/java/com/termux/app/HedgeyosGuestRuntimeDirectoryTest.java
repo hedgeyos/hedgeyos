@@ -25,6 +25,15 @@ public class HedgeyosGuestRuntimeDirectoryTest {
         Assert.assertTrue(layout.tmp.mkdirs());
         File staleSocket = new File(layout.tmp, ".X1-lock");
         Assert.assertTrue(staleSocket.createNewFile());
+        Assert.assertTrue(layout.runUserRoot.mkdirs());
+        File brokenIceAuthority = new File(layout.runUserRoot, "ICEauthority");
+        Files.createSymbolicLink(
+            brokenIceAuthority.toPath(),
+            new File(layout.runUserRoot, ".missing-ICEauthority").toPath());
+        Assert.assertFalse(brokenIceAuthority.exists());
+        Assert.assertTrue(Files.exists(
+            brokenIceAuthority.toPath(),
+            java.nio.file.LinkOption.NOFOLLOW_LINKS));
         Assert.assertTrue(layout.processes.mkdirs());
         File ownedPid = new File(layout.processes, "desktop.pid");
         Assert.assertTrue(ownedPid.createNewFile());
@@ -36,6 +45,9 @@ public class HedgeyosGuestRuntimeDirectoryTest {
             posixModeAccess());
 
         Assert.assertFalse(staleSocket.exists());
+        Assert.assertFalse(Files.exists(
+            brokenIceAuthority.toPath(),
+            java.nio.file.LinkOption.NOFOLLOW_LINKS));
         Assert.assertTrue(ownedPid.exists());
         Assert.assertEquals(01777, mode(layout.tmp));
         Assert.assertEquals(01777, mode(layout.shm));

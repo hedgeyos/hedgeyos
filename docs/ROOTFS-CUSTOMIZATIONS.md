@@ -77,6 +77,11 @@ mount contract are documented in [`LINUX-RUNTIME.md`](LINUX-RUNTIME.md).
 
 ## Rebuild Procedure
 
+For a Debian release upgrade, follow the complete
+[`DEBIAN-REBUILD.md`](DEBIAN-REBUILD.md) checklist. It lists every
+release-specific code, build, CI, inspection, ownership, migration, and device
+acceptance surface that must move together.
+
 1. Change a source file under `rootfs/runtime-assets/hedgeyos-linux`.
 2. Add or update its row in `rootfs/customizations.tsv`.
 3. Update this document when behavior, packages, ownership, or modes change.

@@ -35,8 +35,20 @@ grep -Fq 'dbus-run-session' "$ASSET_DIR/hedgeyos-runtime-preflight"
 grep -Fq 'UNSUPPORTED_BY_ANDROID_PROCFS' "$ASSET_DIR/hedgeyos-runtime-preflight"
 grep -Fq 'WARNING|%s|%s' "$ASSET_DIR/hedgeyos-runtime-preflight"
 grep -Fq 'FATAL|%s|%s' "$ASSET_DIR/hedgeyos-runtime-preflight"
+grep -Fq 'display_number=${display_number%%.*}' "$ASSET_DIR/hedgeyos-runtime-preflight"
 grep -Fq 'StandardCopyOption.ATOMIC_MOVE' "$ATOMIC_FILE"
 grep -Fq 'HedgeyosAtomicFile.write' "$MANAGER"
 grep -Fq 'matchesOwnedProcess' "$PROCESS_OWNER"
+
+normalize_display() {
+    display_number=$1
+    display_number=${display_number#*:}
+    display_number=${display_number%%.*}
+    printf '%s\n' "$display_number"
+}
+
+test "$(normalize_display :1)" = 1
+test "$(normalize_display :1.0)" = 1
+test "$(normalize_display localhost:10.0)" = 10
 
 printf 'Linux runtime contract tests passed.\n'

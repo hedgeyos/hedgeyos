@@ -179,6 +179,7 @@ See [`docs/BUILDING.md`](docs/BUILDING.md) for current toolchain requirements.
 - [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/BUILDING.md`](docs/BUILDING.md)
+- [`docs/DEBIAN-REBUILD.md`](docs/DEBIAN-REBUILD.md)
 - [`docs/FIRSTBOOT.md`](docs/FIRSTBOOT.md)
 - [`docs/KNOWN-ISSUES.md`](docs/KNOWN-ISSUES.md)
 - [`docs/LINUX-RUNTIME.md`](docs/LINUX-RUNTIME.md)

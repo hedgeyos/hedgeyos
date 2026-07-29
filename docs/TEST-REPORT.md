@@ -260,12 +260,34 @@ capabilities plus detailed preflight results. Stop and restart now validate
 same-UID PIDs against the exact PRoot/rootfs or X11 role instead of killing
 broad process-name matches.
 
-The initial runtime commit `150c4001` passed the full local test suite and clean
-GitHub rootfs/APK build. The clean rootfs inspector confirmed
+The initial runtime commit `150c4001` and completed capability commit
+`ee1a5664` passed the full local test suite and clean GitHub rootfs/APK build.
+The clean rootfs inspector confirmed
 `hedgeyos-runtime-preflight` and `hedgeyos-start-desktop` as root-owned mode
-`0755`. Phone evidence for shared memory, unrelated GTK/Qt applications,
-Chromium without special flags, restart, force-stop recovery, and fresh
-extraction remains pending and must be added before alpha.5 is published.
+`0755`.
+
+On 2026-07-29, a fresh alpha.5 install on the attached CPH2499 reached the
+complete desktop. The user confirmed desktop startup, terminal launch,
+`sudo -n true`, `apt update`, package installation, and `hello`. Startup
+preflight reported writable `/dev/shm`, successful Python POSIX shared memory,
+memfd, System V shared memory, private session D-Bus, and
+`summary=PASS fatal=0`.
+
+An interactive rerun initially produced a false X11 fatal because XFCE Terminal
+exports `DISPLAY=:1.0` while startup uses `DISPLAY=:1`. The checker incorrectly
+looked for `/tmp/.X11-unix/X1.0`; both forms now normalize to the actual
+`/tmp/.X11-unix/X1` socket, with contract coverage for `:1`, `:1.0`, and
+`localhost:10.0`.
+
+The same test session exposed a restart cleanup defect. X11 left a broken
+`ICEauthority` symlink under `/run/user/0`; `File.exists()` followed the missing
+target and skipped the link, leaving the parent nonempty. Runtime cleanup now
+uses `Files.exists(..., NOFOLLOW_LINKS)`, and a regression test creates and
+removes the same broken-link shape.
+
+Visual GTK and process-liveness Qt evidence passed. Chromium's flag-free
+normal-user launch and the final restart/force-stop acceptance steps remain
+pending before alpha.5 publication.
 
 ## Automated Verification
 

@@ -172,10 +172,13 @@ final class HedgeyosGuestRuntime {
     }
 
     private static void deleteRecursively(File file) throws IOException {
-        if (file == null || !file.exists()) {
+        if (file == null) {
             return;
         }
         Path path = file.toPath();
+        if (!Files.exists(path, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
         if (Files.isDirectory(path, java.nio.file.LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(path)) {
             File[] children = file.listFiles();
             if (children != null) {

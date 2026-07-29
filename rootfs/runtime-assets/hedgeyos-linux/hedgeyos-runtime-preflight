@@ -73,7 +73,16 @@ else
     warning inotify "UNSUPPORTED_BY_ANDROID_PROCFS: max_user_watches is not visible to this app"
 fi
 
-socket="/tmp/.X11-unix/X${DISPLAY#:}"
+display_number=${DISPLAY:-:1}
+display_number=${display_number#*:}
+display_number=${display_number%%.*}
+case "$display_number" in
+    ''|*[!0-9]*)
+        fatal x11 "DISPLAY=${DISPLAY:-unset} does not contain a local numeric display"
+        display_number=invalid
+        ;;
+esac
+socket="/tmp/.X11-unix/X${display_number}"
 attempt=0
 while [ ! -S "$socket" ] && [ "$attempt" -lt 25 ]; do
     attempt=$((attempt + 1))
