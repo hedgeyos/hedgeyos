@@ -70,7 +70,7 @@ if [ -r /proc/sys/fs/inotify/max_user_watches ]; then
     value=$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || printf unreadable)
     pass inotify "max_user_watches=$value"
 else
-    warning inotify "Android does not expose max_user_watches to this app"
+    warning inotify "UNSUPPORTED_BY_ANDROID_PROCFS: max_user_watches is not visible to this app"
 fi
 
 socket="/tmp/.X11-unix/X${DISPLAY#:}"
@@ -119,9 +119,31 @@ PY
     else
         warning memfd "memfd_create is unavailable or blocked by the Android kernel"
     fi
+
+    if python3 - <<'PY'
+import ctypes
+import os
+
+libc = ctypes.CDLL(None, use_errno=True)
+shmid = libc.shmget(0, 4096, 0o600 | 0o1000)
+if shmid < 0:
+    raise OSError(ctypes.get_errno(), os.strerror(ctypes.get_errno()))
+try:
+    if libc.shmctl(shmid, 0, None) != 0:
+        raise OSError(ctypes.get_errno(), os.strerror(ctypes.get_errno()))
+except BaseException:
+    libc.shmctl(shmid, 0, None)
+    raise
+PY
+    then
+        pass sysv-ipc "System V shared memory create and remove succeeded"
+    else
+        warning sysv-ipc "System V shared memory is unavailable or blocked by the Android kernel"
+    fi
 else
     unsupported posix-shm "python3 is not installed; directory checks still passed"
     unsupported memfd "python3 is not installed"
+    unsupported sysv-ipc "python3 is not installed"
 fi
 
 if command -v dbus-run-session >/dev/null 2>&1; then

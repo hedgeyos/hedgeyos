@@ -86,6 +86,9 @@ GitHub Actions workflow:
   `HedgeyosGuestRuntimeTest` to enforce the single PRoot mount contract,
   `/dev/shm` and `/run` ordering, versioned runtime assets, and the absence of
   app-specific Chromium workarounds.
+- Focused runtime unit tests also verify applied directory modes, stale
+  ephemeral-state cleanup, atomic state replacement, parsed capabilities,
+  guest-UID-specific `XDG_RUNTIME_DIR`, and exact same-UID process targeting.
 - It uploads a small `hedgeyos-apk-inspection` artifact separately from the large
   APK artifact.
 - It uploads the APK, SHA-256 file, rootfs manifests, build logs, and inspection

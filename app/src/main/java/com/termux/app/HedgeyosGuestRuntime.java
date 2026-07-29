@@ -14,8 +14,19 @@ final class HedgeyosGuestRuntime {
     static final String GUEST_TMP = "/tmp";
     static final String GUEST_SHM = "/dev/shm";
     static final String GUEST_RUN = "/run";
-    static final String GUEST_ROOT_RUNTIME = "/run/user/0";
+    static final String GUEST_RUNTIME_USER_PREFIX = "/run/user/";
     static final String RUNTIME_REPORT = "/home/hedgeyos/Logs/linux-runtime-report.txt";
+    private static final DirectoryModeAccess ANDROID_MODE_ACCESS = new DirectoryModeAccess() {
+        @Override
+        public void apply(File directory, int mode) throws Exception {
+            Os.chmod(directory.getAbsolutePath(), mode);
+        }
+
+        @Override
+        public int read(File directory) throws Exception {
+            return Os.stat(directory.getAbsolutePath()).st_mode & 07777;
+        }
+    };
 
     private HedgeyosGuestRuntime() {}
 
@@ -36,6 +47,11 @@ final class HedgeyosGuestRuntime {
     }
 
     static void prepare(Layout layout, File rootfs, boolean resetEphemeral) throws IOException {
+        prepare(layout, rootfs, resetEphemeral, ANDROID_MODE_ACCESS);
+    }
+
+    static void prepare(Layout layout, File rootfs, boolean resetEphemeral,
+                        DirectoryModeAccess modeAccess) throws IOException {
         mkdirs(layout.root);
         if (resetEphemeral) {
             deleteRecursively(layout.tmp);
@@ -43,21 +59,21 @@ final class HedgeyosGuestRuntime {
             deleteRecursively(layout.run);
         }
 
-        ensureDirectory(layout.tmp, 01777);
-        ensureDirectory(layout.shm, 01777);
-        ensureDirectory(layout.run, 0755);
-        ensureDirectory(layout.runShm, 01777);
-        ensureDirectory(layout.runLock, 01777);
-        ensureDirectory(layout.runDbus, 0755);
-        ensureDirectory(layout.runUserRoot, 0700);
-        ensureDirectory(layout.runUserHedgeyos, 0700);
-        ensureDirectory(layout.processes, 0700);
+        ensureDirectory(layout.tmp, 01777, modeAccess);
+        ensureDirectory(layout.shm, 01777, modeAccess);
+        ensureDirectory(layout.run, 0755, modeAccess);
+        ensureDirectory(layout.runShm, 01777, modeAccess);
+        ensureDirectory(layout.runLock, 01777, modeAccess);
+        ensureDirectory(layout.runDbus, 0755, modeAccess);
+        ensureDirectory(layout.runUserRoot, 0700, modeAccess);
+        ensureDirectory(layout.runUserHedgeyos, 0700, modeAccess);
+        ensureDirectory(layout.processes, 0700, modeAccess);
 
         if (rootfs != null && rootfs.isDirectory()) {
-            ensureDirectory(new File(rootfs, "dev/shm"), 01777);
-            ensureDirectory(new File(rootfs, "run/shm"), 01777);
-            ensureDirectory(new File(rootfs, "tmp"), 01777);
-            ensureDirectory(new File(rootfs, "run"), 0755);
+            ensureDirectory(new File(rootfs, "dev/shm"), 01777, modeAccess);
+            ensureDirectory(new File(rootfs, "run/shm"), 01777, modeAccess);
+            ensureDirectory(new File(rootfs, "tmp"), 01777, modeAccess);
+            ensureDirectory(new File(rootfs, "run"), 0755, modeAccess);
         }
     }
 
@@ -103,7 +119,7 @@ final class HedgeyosGuestRuntime {
         command.add("DISPLAY=" + display);
         command.add("LANG=C.UTF-8");
         command.add("TMPDIR=" + GUEST_TMP);
-        command.add("XDG_RUNTIME_DIR=" + GUEST_ROOT_RUNTIME);
+        command.add("XDG_RUNTIME_DIR=" + GUEST_RUNTIME_USER_PREFIX + guestUid(changeId));
         command.add("HEDGEYOS_SESSION_LOG=/home/hedgeyos/Logs/xfce-session.log");
         command.add("HEDGEYOS_RUNTIME_REPORT=" + RUNTIME_REPORT);
         command.add("PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
@@ -113,14 +129,38 @@ final class HedgeyosGuestRuntime {
         return command;
     }
 
-    private static void ensureDirectory(File directory, int mode) throws IOException {
+    private static String guestUid(String changeId) {
+        int separator = changeId.indexOf(':');
+        String uid = separator >= 0 ? changeId.substring(0, separator) : changeId;
+        if (uid.isEmpty()) {
+            throw new IllegalArgumentException("Guest identity is missing a uid: " + changeId);
+        }
+        for (int index = 0; index < uid.length(); index++) {
+            if (!Character.isDigit(uid.charAt(index))) {
+                throw new IllegalArgumentException("Guest uid is not numeric: " + changeId);
+            }
+        }
+        return uid;
+    }
+
+    private static void ensureDirectory(File directory, int mode,
+                                        DirectoryModeAccess modeAccess) throws IOException {
         if (directory.exists() && !directory.isDirectory()) {
             throw new IOException("Runtime path is not a directory: " + directory.getAbsolutePath());
         }
         mkdirs(directory);
         try {
-            Os.chmod(directory.getAbsolutePath(), mode);
+            modeAccess.apply(directory, mode);
+            int actualMode = modeAccess.read(directory);
+            if (actualMode != mode) {
+                throw new IOException("Runtime directory mode is " +
+                    Integer.toOctalString(actualMode) + ", expected " +
+                    Integer.toOctalString(mode) + ": " + directory.getAbsolutePath());
+            }
         } catch (Exception e) {
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            }
             throw new IOException("Failed to set runtime directory mode: " + directory.getAbsolutePath(), e);
         }
     }
@@ -147,6 +187,11 @@ final class HedgeyosGuestRuntime {
         if (!file.delete()) {
             throw new IOException("Failed to delete runtime path: " + file.getAbsolutePath());
         }
+    }
+
+    interface DirectoryModeAccess {
+        void apply(File directory, int mode) throws Exception;
+        int read(File directory) throws Exception;
     }
 
     static final class Layout {

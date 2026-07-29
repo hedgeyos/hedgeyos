@@ -109,6 +109,12 @@ Result classes are:
 Any `FATAL` result exits with code 2 and blocks XFCE startup. Warnings about
 system D-Bus or Android-owned `/proc/sys` entries do not block the desktop.
 
+Android code parses the same report into `LinuxRuntimeCapabilities`. Call
+`HedgeyosRuntimeManager.getLinuxRuntimeCapabilities(context)` to inspect
+writable temporary storage, POSIX and System V shared memory, memfd, D-Bus,
+procfs visibility, X11, and structured compatibility warnings without parsing
+display text.
+
 ## Process Ownership
 
 HedgeyOS records the exact desktop PRoot and embedded-X11 process identities
@@ -117,7 +123,7 @@ under `linux-runtime/processes`. State files are written atomically.
 On stop or restart, a recorded PID is acted on only when:
 
 - `/proc/<pid>/status` reports the HedgeyOS Android UID.
-- The command line matches the expected role.
+- NUL-delimited `/proc/<pid>/cmdline` argv entries match the expected role.
 - Desktop PRoot includes the exact bundled PRoot path, exact rootfs path, and
   `--kill-on-exit`.
 - X11 identifies itself as `hedgeyos-x11`.
@@ -151,6 +157,9 @@ upgrading does not require deleting Debian or installed applications.
 4. Update this document whenever paths, modes, bind order, severity, ownership,
    or kernel limitations change.
 5. Run `./scripts/test-linux-runtime.sh` and the Android unit suite.
+   The tests cover bind order, guest UID environment selection, directory
+   modes, ephemeral cleanup, atomic state replacement, capability parsing, and
+   exact same-UID process validation.
 6. Build the rootfs with `rootfs/build-rootfs.sh`.
 7. Run `scripts/inspect-hedgeyos-rootfs.sh` and confirm both runtime helpers are
    root-owned mode `0755`.

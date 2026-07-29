@@ -242,6 +242,31 @@ an existing NVIDIA 535 DKMS failure against the host's 7.0.0-28 kernel. It was
 not caused by the hedgeyos APK or rootfs, and this work did not alter that
 driver.
 
+## Linux Runtime Compatibility Postmortem
+
+The alpha.4 guest mounted Android `/dev` wholesale and backed guest `/tmp`
+inside the persistent rootfs. Android did not provide `/dev/shm` on the test
+phone, so ordinary Linux applications could not create POSIX shared-memory
+objects. Chromium reported the missing path and deliberately aborted, but the
+fault was a generic Linux runtime omission rather than a browser defect.
+Persistent X11, D-Bus, and lock state also made restart behavior less isolated
+than a desktop session expects.
+
+The alpha.5 candidate routes every production PRoot command through one runtime
+builder. It creates host-backed ephemeral `/tmp`, `/run`, and `/dev/shm`, keeps
+the specific shared-memory bind after the parent `/dev` bind, gives X11 the
+same `/tmp`, launches XFCE under a private session D-Bus, and publishes parsed
+capabilities plus detailed preflight results. Stop and restart now validate
+same-UID PIDs against the exact PRoot/rootfs or X11 role instead of killing
+broad process-name matches.
+
+The initial runtime commit `150c4001` passed the full local test suite and clean
+GitHub rootfs/APK build. The clean rootfs inspector confirmed
+`hedgeyos-runtime-preflight` and `hedgeyos-start-desktop` as root-owned mode
+`0755`. Phone evidence for shared memory, unrelated GTK/Qt applications,
+Chromium without special flags, restart, force-stop recovery, and fresh
+extraction remains pending and must be added before alpha.5 is published.
+
 ## Automated Verification
 
 Passed:

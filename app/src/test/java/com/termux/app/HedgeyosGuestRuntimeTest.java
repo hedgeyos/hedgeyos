@@ -92,4 +92,24 @@ public class HedgeyosGuestRuntimeTest {
         Assert.assertTrue(command.contains("--bind=" + layout.shm.getAbsolutePath() + ":/dev/shm"));
         Assert.assertTrue(command.contains("--bind=" + layout.run.getAbsolutePath() + ":/run"));
     }
+
+    @Test
+    public void xdgRuntimeDirectoryTracksGuestUid() throws Exception {
+        File files = temporaryFolder.newFolder("files");
+
+        List<String> command = HedgeyosGuestRuntime.buildCommand(
+            new File(files, "usr/bin/proot"),
+            new File(files, "debian"),
+            HedgeyosGuestRuntime.layout(files),
+            new File(files, "export"),
+            new File(files, "public-logs"),
+            "id",
+            "1000:1000",
+            "/home/hedgeyos",
+            "hedgeyos",
+            ":1",
+            false);
+
+        Assert.assertTrue(command.contains("XDG_RUNTIME_DIR=/run/user/1000"));
+    }
 }

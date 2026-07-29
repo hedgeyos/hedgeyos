@@ -20,7 +20,6 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
@@ -216,10 +215,16 @@ public final class HedgeyosRuntimeManager {
 
     public static String readLinuxRuntimeReport(Context context) {
         String report = readFile(new File(publicLogDir(context), "linux-runtime-report.txt")).trim();
-        if (report.isEmpty()) {
-            return "No Linux runtime report has been generated yet. Start or restart the desktop to run the preflight checks.";
+        LinuxRuntimeCapabilities capabilities = LinuxRuntimeCapabilities.parse(report);
+        if (!capabilities.reportAvailable) {
+            return capabilities.toDisplayText();
         }
-        return report;
+        return capabilities.toDisplayText() + "\n\nDetailed checks\n" + report;
+    }
+
+    public static LinuxRuntimeCapabilities getLinuxRuntimeCapabilities(Context context) {
+        return LinuxRuntimeCapabilities.parse(
+            readFile(new File(publicLogDir(context), "linux-runtime-report.txt")));
     }
 
     private static void ensureInstalled(Context context) throws Exception {
@@ -824,23 +829,7 @@ public final class HedgeyosRuntimeManager {
     }
 
     private static void writeAtomicFile(File file, String content) throws IOException {
-        mkdirs(file.getParentFile());
-        File temporary = new File(file.getParentFile(), file.getName() + ".tmp." +
-            Long.toUnsignedString(System.nanoTime(), 36));
-        try {
-            try (FileOutputStream output = new FileOutputStream(temporary)) {
-                output.write(content.getBytes(StandardCharsets.UTF_8));
-                output.getFD().sync();
-            }
-            try {
-                Files.move(temporary.toPath(), file.toPath(),
-                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException atomicMoveFailed) {
-                Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            }
-        } finally {
-            deleteFile(temporary);
-        }
+        HedgeyosAtomicFile.write(file, content);
     }
 
     private static String readFile(File file) {

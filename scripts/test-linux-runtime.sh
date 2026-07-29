@@ -6,6 +6,8 @@ REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 ASSET_DIR="$REPO_ROOT/rootfs/runtime-assets/hedgeyos-linux"
 MANAGER="$REPO_ROOT/app/src/main/java/com/termux/app/HedgeyosRuntimeManager.java"
 RUNTIME="$REPO_ROOT/app/src/main/java/com/termux/app/HedgeyosGuestRuntime.java"
+ATOMIC_FILE="$REPO_ROOT/app/src/main/java/com/termux/app/HedgeyosAtomicFile.java"
+PROCESS_OWNER="$REPO_ROOT/app/src/main/java/com/termux/app/HedgeyosProcessOwner.java"
 
 sh -n "$ASSET_DIR/hedgeyos-runtime-preflight"
 bash -n "$ASSET_DIR/hedgeyos-start-desktop"
@@ -28,8 +30,13 @@ grep -Fq 'command.add("--bind=" + layout.run.getAbsolutePath() + ":" + GUEST_RUN
 
 grep -Fq 'check_directory shm /dev/shm 1777' "$ASSET_DIR/hedgeyos-runtime-preflight"
 grep -Fq 'from multiprocessing import shared_memory' "$ASSET_DIR/hedgeyos-runtime-preflight"
+grep -Fq 'libc.shmget' "$ASSET_DIR/hedgeyos-runtime-preflight"
 grep -Fq 'dbus-run-session' "$ASSET_DIR/hedgeyos-runtime-preflight"
+grep -Fq 'UNSUPPORTED_BY_ANDROID_PROCFS' "$ASSET_DIR/hedgeyos-runtime-preflight"
 grep -Fq 'WARNING|%s|%s' "$ASSET_DIR/hedgeyos-runtime-preflight"
 grep -Fq 'FATAL|%s|%s' "$ASSET_DIR/hedgeyos-runtime-preflight"
+grep -Fq 'StandardCopyOption.ATOMIC_MOVE' "$ATOMIC_FILE"
+grep -Fq 'HedgeyosAtomicFile.write' "$MANAGER"
+grep -Fq 'matchesOwnedProcess' "$PROCESS_OWNER"
 
 printf 'Linux runtime contract tests passed.\n'
