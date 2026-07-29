@@ -2,9 +2,9 @@
 
 Turn an Android phone into a Debian graphical workstation and Home launcher.
 
-[Download hedgeyos v0.1.0-alpha.3 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.3/hedgeyos-arm64-v8a-alpha.3-test-signed.apk)
+[Download hedgeyos v0.1.0-alpha.4 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.4/hedgeyos-arm64-v8a-alpha.4-test-signed.apk)
 
-Current status: `v0.1.0-alpha.3` is published as a GitHub prerelease and has
+Current status: `v0.1.0-alpha.4` is published as a GitHub prerelease and has
 device smoke-test evidence on an attached ARM64 phone. The alpha boots into the
 bundled Debian 13/XFCE desktop as the Android Home screen, starts embedded
 Termux:X11 from inside the hedgeyos APK, opens Debian desktop apps, exposes the
@@ -29,6 +29,10 @@ Alpha.3 makes Direct touch the default pointer mode, places the soft-keyboard
 button in the always-visible extra-key row, and closes the hedgehog control
 window before opening Android's soft keyboard.
 
+Alpha.4 doubles the draggable hedgehog control to `96dp`, replaces the
+space-heavy XFCE Applications label with a hedgehog-only button, and enables
+single-click desktop launchers for touch use.
+
 ## What hedgeyos Is
 
 hedgeyos is an experimental, independent Termux-derived Android app. The goal is
@@ -44,13 +48,13 @@ hedgeyos is not affiliated with, endorsed by, or released by the Termux project.
 - Sideloading enabled by the user.
 - Enough free storage for the APK, compressed rootfs, and extracted Debian tree.
 
-Published alpha.3 artifact details:
+Published alpha.4 artifact details:
 
-- Test-signed APK size: 262,111,461 bytes.
+- Test-signed APK size: 262,136,122 bytes.
 - Bundled Debian rootfs size: 221,639,012 bytes compressed.
 - Bundled PRoot payload size: 114,325 bytes compressed.
 - APK SHA-256:
-  `091a2a4788f60b0e9ea3c88ba68328579f2116df173e849e108e8367739d7c3d`.
+  `44865100049105dfd29dadce413ed45715685aa4c80c0dc68444793f09458321`.
 - Test signing certificate SHA-256:
   `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`.
 
@@ -59,7 +63,7 @@ production-signed artifact.
 
 ## Install
 
-1. Download `hedgeyos-arm64-v8a-alpha.3-test-signed.apk` from the release above.
+1. Download `hedgeyos-arm64-v8a-alpha.4-test-signed.apk` from the release above.
 2. Install it through Android sideloading.
 3. Open hedgeyos from the app icon.
 4. Use Android's Home app chooser when prompted, or tap `Choose Home App`.
@@ -105,7 +109,7 @@ completed setup guide can always be reopened from the hedgehog control.
 
 The hedgehog is an activity-local control over the Linux desktop, not a
 system-wide overlay over other Android apps. It uses the transparent Hitomi
-companion artwork at `48dp`, can be dragged, remembers a normalized position,
+companion artwork at `96dp`, can be dragged, remembers a normalized position,
 and stays visible and on-screen after display rotation.
 
 ## Desktop And Controls
@@ -113,6 +117,8 @@ and stays visible and on-screen after display rotation.
 XFCE remains the desktop environment and retains its panel. The default desktop
 shows one hedgeyos Terminal launcher; built-in Home, Filesystem, Trash, and
 removable-volume icons are hidden without deleting user-created desktop files.
+Desktop launchers open with one click, and the panel's Applications button uses
+the transparent hedgehog icon without a text label.
 
 Primary terminal and file-manager windows open maximized. Window controls are
 ordered on the left as Close, Maximize, Minimize, and app icon, while the title

@@ -2,19 +2,19 @@
 
 Date: 2026-07-29
 
-Current status: `v0.1.0-alpha.3` is a published, test-signed GitHub
+Current status: `v0.1.0-alpha.4` is a published, test-signed GitHub
 prerelease. It contains Phase 1 of the Android and Debian performance/stability
 work and is not the final production-signed `v0.1.0` release.
 
 Release:
 
-- URL: <https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.3>
-- APK: `hedgeyos-arm64-v8a-alpha.3-test-signed.apk`
-- Version: `0.1.0-alpha.3`
-- Version code: `3`
-- APK size: 262,111,461 bytes
+- URL: <https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.4>
+- APK: `hedgeyos-arm64-v8a-alpha.4-test-signed.apk`
+- Version: `0.1.0-alpha.4`
+- Version code: `4`
+- APK size: 262,136,122 bytes
 - APK SHA-256:
-  `091a2a4788f60b0e9ea3c88ba68328579f2116df173e849e108e8367739d7c3d`
+  `44865100049105dfd29dadce413ed45715685aa4c80c0dc68444793f09458321`
 - Test signing certificate SHA-256:
   `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`
 - `apksigner verify --verbose`: v2 and v3 signatures verified.
@@ -30,7 +30,7 @@ Device:
 `scripts/inspect-hedgeyos-apk.sh` passed against the signed release candidate:
 
 ```text
-sha256=091a2a4788f60b0e9ea3c88ba68328579f2116df173e849e108e8367739d7c3d
+sha256=44865100049105dfd29dadce413ed45715685aa4c80c0dc68444793f09458321
 package=org.hedgeyos
 launcher=com.termux.x11.HedgeyosHomeActivity
 fallback_home_activity_enabled=false
@@ -42,6 +42,7 @@ bundled_proot=assets/termux-proot-aarch64.tar.zst
 embedded_x11=lib/arm64-v8a/libXlorie.so
 power_protection=wake_lock_and_battery_setup
 overlay_asset=drawable/hedgeyos_companion
+linux_menu_icon=assets/hedgeyos-linux/hedgeyos-menu.png
 linux_defaults=assets/hedgeyos-linux/hedgeyos-apply-defaults
 vnc_files=absent_in_apk_listing
 ```
@@ -57,6 +58,21 @@ The rebuilt Debian rootfs also passed
   `rootfs/customizations.tsv`
 
 ## Device Evidence
+
+### Alpha.4 Touch Ergonomics
+
+Alpha.4 installed over alpha.3 with `adb install -r`, preserving the existing
+Debian data and applying Linux defaults migration version 2.
+
+- The XFCE panel replaced its icon-plus-`Applications` label with the
+  transparent hedgehog-only button. Tapping it opened the normal Applications
+  menu.
+- The Android hedgehog overlay grew from 48 dp to 96 dp. Its UI bounds doubled
+  from 133 by 133 physical pixels to 265 by 265 pixels at the tested density
+  and remained fully on-screen.
+- XFCE's native `/desktop-icons/single-click` setting was enabled. One physical
+  tap on the Terminal desktop icon opened a maximized terminal.
+- The signed APK reported source commit `79f29dd9` on the attached phone.
 
 ### Alpha.3 Upgrade And Interaction Checks
 
@@ -251,6 +267,6 @@ refresh path.
 
 ## Release Decision
 
-`v0.1.0-alpha.3` is suitable as a public prerelease/test APK. Final `v0.1.0`
+`v0.1.0-alpha.4` is suitable as a public prerelease/test APK. Final `v0.1.0`
 still requires production signing, direct in-app Reset Debian evidence,
 physical-keyboard testing, and broader device coverage.

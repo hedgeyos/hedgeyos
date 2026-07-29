@@ -29,7 +29,7 @@ Current repository state:
   `MainActivity`, preserving its `LorieView` surface, input, resize, clipboard,
   and binder connection path while adding runtime status and the permanent
   activity-local `HedgeyosOverlayController`.
-- The overlay uses the transparent Hitomi hedgehog artwork at `48dp`, persists
+- The overlay uses the transparent Hitomi hedgehog artwork at `96dp`, persists
   normalized drag coordinates, clamps them after layout or rotation changes,
   and opens compact scrollable control and power-setup mini-windows.
 - `hedgeyosX11Bridge` starts `com.termux.x11.CmdEntryPoint` through Android
@@ -46,6 +46,9 @@ Current repository state:
   `rootfs/runtime-assets/hedgeyos-linux`, declared by
   `rootfs/customizations.tsv`, seeded into fresh rootfs builds, and packaged in
   the APK for versioned migration.
+- Versioned XFCE defaults identify the Applications plugin by its canonical
+  `applicationsmenu` type, give it a compact hedgehog-only button, and enable
+  native single-click desktop launchers.
 - XFCE starts `devilspie2` for event-driven portrait window policy. Primary
   terminal and file-manager windows maximize; oversized secondary windows
   receive a narrower initial geometry.

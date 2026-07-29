@@ -1,6 +1,6 @@
 # Known Issues
 
-- `v0.1.0-alpha.3` is a published, test-signed prerelease. It is not the final
+- `v0.1.0-alpha.4` is a published, test-signed prerelease. It is not the final
   `v0.1.0` production release.
 - The alpha boot/restart gate passes on the attached ARM64 phone: hedgeyos
   installs, starts embedded X11, reaches XFCE with the panel/dock and `xfwm4`
