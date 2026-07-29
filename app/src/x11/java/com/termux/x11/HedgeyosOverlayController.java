@@ -31,6 +31,7 @@ final class HedgeyosOverlayController {
     interface Actions {
         void openTerminal();
         void runAptCheck();
+        void showRuntimeReport();
         void showLogs();
         void restartDesktop();
         void stopDesktop();
@@ -202,6 +203,7 @@ final class HedgeyosOverlayController {
         body.addView(actionButton("Background survival setup", () -> showPowerGuide()));
         body.addView(actionButton("Open Debian Terminal", actions::openTerminal));
         body.addView(actionButton("Run Debian APT Check", actions::runAptCheck));
+        body.addView(actionButton("Linux Runtime Report", actions::showRuntimeReport));
         body.addView(actionButton("Open hedgeyos logs", actions::showLogs));
         body.addView(actionButton("Restart Desktop", actions::restartDesktop));
         body.addView(actionButton("Stop Desktop", actions::stopDesktop));

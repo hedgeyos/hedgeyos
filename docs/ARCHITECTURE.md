@@ -32,10 +32,17 @@ Current repository state:
 - The overlay uses the transparent Hitomi hedgehog artwork at `96dp`, persists
   normalized drag coordinates, clamps them after layout or rotation changes,
   and opens compact scrollable control and power-setup mini-windows.
-- `hedgeyosX11Bridge` starts `com.termux.x11.CmdEntryPoint` through Android
+- `HedgeyosGuestRuntime` owns one PRoot mount and environment contract for
+  desktop, terminal, package, and migration commands. Its host-backed
+  `/tmp`, `/run`, and `/dev/shm` tree is reset between desktop sessions.
+- `HedgeyosProcessOwner` records and validates exact same-UID desktop and X11
+  process identities. Stop and restart do not use broad process-name matching.
+- Linux runtime preflight results are atomically exported to
+  `linux-runtime-report.txt` and exposed through the hedgehog controls.
+- `HedgeyosX11Bridge` starts `com.termux.x11.CmdEntryPoint` through Android
   `app_process` with `CLASSPATH` pointed at the hedgeyos APK and `TMPDIR` pointed at
   hedgeyos's private shared tmp directory.
-- `hedgeyosX11Bridge` sets `XKB_CONFIG_ROOT` to the bundled Debian rootfs XKB
+- `HedgeyosX11Bridge` sets `XKB_CONFIG_ROOT` to the bundled Debian rootfs XKB
   directory so the embedded X11 server does not depend on Termux paths.
 - Release packaging stores `lib/arm64-v8a/libXlorie.so` uncompressed because
   the embedded X11 command entry point loads that library directly from the APK

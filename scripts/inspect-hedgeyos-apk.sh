@@ -120,6 +120,10 @@ contains "$OUT_DIR/apk-contents.txt" "assets/termux-proot-aarch64.tar.zst.sha256
     fail "APK does not contain bundled PRoot payload checksum"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-apply-defaults" ||
     fail "APK does not contain Linux defaults migration"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-runtime-preflight" ||
+    fail "APK does not contain Linux runtime preflight"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-start-desktop" ||
+    fail "APK does not contain Linux desktop startup helper"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-window-rules.desktop" ||
     fail "APK does not contain Linux window-rule autostart"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-window-rules.lua" ||
@@ -173,6 +177,8 @@ fi
     printf 'overlay_asset=drawable/hedgeyos_companion\n'
     printf 'linux_menu_icon=assets/hedgeyos-linux/hedgeyos-menu.png\n'
     printf 'linux_defaults=assets/hedgeyos-linux/hedgeyos-apply-defaults\n'
+    printf 'linux_runtime_preflight=assets/hedgeyos-linux/hedgeyos-runtime-preflight\n'
+    printf 'linux_desktop_startup=assets/hedgeyos-linux/hedgeyos-start-desktop\n'
     printf 'vnc_files=absent_in_apk_listing\n'
 } > "$OUT_DIR/summary.properties"
 

@@ -33,7 +33,7 @@ final class HedgeyosX11Bridge {
         }
     }
 
-    static void startServer(Context context, File tmpDir, File logFile) throws Exception {
+    static void startServer(Context context, File tmpDir, File logFile, File pidFile) throws Exception {
         if (!isAvailable(context)) {
             throw new IOException("Embedded Termux:X11 module is not packaged in this build.");
         }
@@ -52,6 +52,10 @@ final class HedgeyosX11Bridge {
 
         mkdirs(tmpDir);
         mkdirs(logFile.getParentFile());
+        List<Integer> stale = HedgeyosProcessOwner.stopRecordedAndMatching(pidFile, "hedgeyos-x11");
+        if (!stale.isEmpty()) {
+            appendLog(context, logFile, "Stopped owned stale X11 processes: " + stale);
+        }
         File appProcess = new File("/system/bin/app_process");
         if (!appProcess.exists()) {
             throw new IOException("Android app_process is missing; embedded X11 cannot start.");
@@ -71,7 +75,7 @@ final class HedgeyosX11Bridge {
         builder.environment().put("CLASSPATH", context.getPackageCodePath());
         builder.environment().put("TMPDIR", tmpDir.getAbsolutePath());
         builder.environment().put("TERMUX_X11_DEBUG", "1");
-        File xkbConfigRoot = new File(tmpDir.getParentFile(), "usr/share/X11/xkb");
+        File xkbConfigRoot = new File(context.getFilesDir(), "debian/usr/share/X11/xkb");
         if (xkbConfigRoot.isDirectory()) {
             builder.environment().put("XKB_CONFIG_ROOT", xkbConfigRoot.getAbsolutePath());
         }
@@ -86,6 +90,17 @@ final class HedgeyosX11Bridge {
         synchronized (LOCK) {
             sX11Process = process;
         }
+        try {
+            HedgeyosProcessOwner.recordMatching(pidFile, "hedgeyos-x11");
+        } catch (IOException e) {
+            process.destroyForcibly();
+            synchronized (LOCK) {
+                if (sX11Process == process) {
+                    sX11Process = null;
+                }
+            }
+            throw e;
+        }
 
         Thread.sleep(START_GRACE_MS);
         try {
@@ -95,13 +110,14 @@ final class HedgeyosX11Bridge {
                     sX11Process = null;
                 }
             }
+            HedgeyosProcessOwner.clear(pidFile);
             throw new IOException("Embedded X11 server exited during startup with code " + exitCode + ".\n" + tailText(readFile(logFile), 2400));
         } catch (IllegalThreadStateException stillRunning) {
             appendLog(context, logFile, "Embedded Termux:X11 server is running.");
         }
     }
 
-    static void stopServer() {
+    static void stopServer(Context context, File pidFile, File logFile) {
         Process processToStop = null;
         synchronized (LOCK) {
             if (sX11Process != null) {
@@ -109,17 +125,20 @@ final class HedgeyosX11Bridge {
                 sX11Process = null;
             }
         }
-        if (processToStop == null) {
-            return;
-        }
-        processToStop.destroy();
-        try {
-            if (!processToStop.waitFor(2, TimeUnit.SECONDS)) {
+        if (processToStop != null) {
+            processToStop.destroy();
+            try {
+                if (!processToStop.waitFor(2, TimeUnit.SECONDS)) {
+                    processToStop.destroyForcibly();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 processToStop.destroyForcibly();
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            processToStop.destroyForcibly();
+        }
+        List<Integer> stopped = HedgeyosProcessOwner.stopRecordedAndMatching(pidFile, "hedgeyos-x11");
+        if (!stopped.isEmpty()) {
+            appendLog(context, logFile, "Stopped owned X11 processes: " + stopped);
         }
     }
 

@@ -63,19 +63,34 @@ version. It runs after XFCE's configuration service is available.
 - Completion is recorded under
   `/home/hedgeyos/.config/hedgeyos/defaults-version`.
 
+The generic Linux runtime also installs:
+
+- `/usr/local/libexec/hedgeyos-runtime-preflight`, which verifies temporary
+  storage, shared memory, runtime directories, X11, session D-Bus, and visible
+  Android kernel facilities before XFCE starts.
+- `/usr/local/libexec/hedgeyos-start-desktop`, which owns the reproducible XFCE
+  and session D-Bus startup sequence.
+
+Both files are copied into existing rootfs installations during normal app
+startup. They do not require a Debian reset. The host-backed runtime layout and
+mount contract are documented in [`LINUX-RUNTIME.md`](LINUX-RUNTIME.md).
+
 ## Rebuild Procedure
 
 1. Change a source file under `rootfs/runtime-assets/hedgeyos-linux`.
 2. Add or update its row in `rootfs/customizations.tsv`.
 3. Update this document when behavior, packages, ownership, or modes change.
 4. Build the rootfs as root with `rootfs/build-rootfs.sh`.
-5. Confirm `app/src/main/assets/hedgeyos-linux/packages` contains the two
+5. Confirm the APK asset source includes the runtime helpers and
+   `app/src/main/assets/hedgeyos-linux/packages` contains the two
    version-matched offline migration packages.
 6. Inspect archive ownership, modes, package capabilities, and customization
    coverage.
 7. Package the generated rootfs and the same runtime assets into the Android
    APK.
-8. Test both fresh extraction and migration of an existing installation.
+8. Run `scripts/test-linux-runtime.sh`.
+9. Test both fresh extraction and migration of an existing installation,
+   including the runtime report and `/dev/shm`.
 
 Do not add ad hoc Linux configuration strings to Android Java code. A new base
 image must be reproducible from the Debian package list, runtime asset tree,

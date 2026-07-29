@@ -60,6 +60,11 @@ public final class HedgeyosHomeActivity extends MainActivity {
             }
 
             @Override
+            public void showRuntimeReport() {
+                showLinuxRuntimeReport();
+            }
+
+            @Override
             public void showLogs() {
                 showHedgeyosLogs();
             }
@@ -255,6 +260,24 @@ public final class HedgeyosHomeActivity extends MainActivity {
 
         new AlertDialog.Builder(this)
             .setTitle("hedgeyos logs")
+            .setView(scrollView)
+            .setPositiveButton("Close", null)
+            .show();
+    }
+
+    private void showLinuxRuntimeReport() {
+        TextView reportText = new TextView(this);
+        reportText.setText(HedgeyosRuntimeManager.readLinuxRuntimeReport(this));
+        reportText.setTextIsSelectable(true);
+        reportText.setTextSize(12);
+        int padding = dp(16);
+        reportText.setPadding(padding, padding, padding, padding);
+
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.addView(reportText);
+
+        new AlertDialog.Builder(this)
+            .setTitle("Linux Runtime Report")
             .setView(scrollView)
             .setPositiveButton("Close", null)
             .show();

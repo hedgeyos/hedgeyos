@@ -29,3 +29,4 @@ jobs:
       run: |
         ./gradlew test
         ./scripts/test-linux-defaults.sh
+        ./scripts/test-linux-runtime.sh

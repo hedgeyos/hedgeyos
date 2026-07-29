@@ -157,6 +157,13 @@ management works inside the rootfs without granting privileges over Android.
 PRoot still has compatibility limits around kernel features, daemons, and
 filesystem semantics.
 
+All Debian launch paths share host-backed ephemeral `/tmp`, `/run`, and
+`/dev/shm` facilities. Before XFCE starts, hedgeyos verifies directory modes,
+POSIX shared memory, the X11 socket, session D-Bus, and visible Android kernel
+interfaces. The resulting Linux Runtime Report is available from the hedgehog
+controls. This is a generic Linux compatibility layer; installed applications
+do not receive Chromium-specific wrappers or sandbox-disabling flags.
+
 ## Build
 
 ```sh
@@ -174,6 +181,7 @@ See [`docs/BUILDING.md`](docs/BUILDING.md) for current toolchain requirements.
 - [`docs/BUILDING.md`](docs/BUILDING.md)
 - [`docs/FIRSTBOOT.md`](docs/FIRSTBOOT.md)
 - [`docs/KNOWN-ISSUES.md`](docs/KNOWN-ISSUES.md)
+- [`docs/LINUX-RUNTIME.md`](docs/LINUX-RUNTIME.md)
 - [`docs/PERFORMANCE-STABILITY-ROADMAP.md`](docs/PERFORMANCE-STABILITY-ROADMAP.md)
 - [`docs/ROOTFS-CUSTOMIZATIONS.md`](docs/ROOTFS-CUSTOMIZATIONS.md)
 - [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md)

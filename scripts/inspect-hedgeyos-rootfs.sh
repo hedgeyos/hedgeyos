@@ -22,6 +22,10 @@ zstd -dc "$ARCHIVE" | tar --numeric-owner -tvf - > "$LISTING"
 
 grep -Fq " ./usr/local/libexec/hedgeyos-apply-defaults" "$LISTING" ||
     fail "missing versioned defaults helper"
+grep -Fq " ./usr/local/libexec/hedgeyos-runtime-preflight" "$LISTING" ||
+    fail "missing Linux runtime preflight"
+grep -Fq " ./usr/local/libexec/hedgeyos-start-desktop" "$LISTING" ||
+    fail "missing Linux desktop startup helper"
 grep -Fq " ./etc/xdg/autostart/hedgeyos-window-rules.desktop" "$LISTING" ||
     fail "missing portrait window-rule autostart"
 grep -Fq " ./etc/hedgeyos/devilspie2/hedgeyos-window-rules.lua" "$LISTING" ||
@@ -32,6 +36,10 @@ grep -Fq " ./usr/share/hedgeyos/defaults/terminalrc" "$LISTING" ||
     fail "missing terminal defaults"
 grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-apply-defaults$' "$LISTING" ||
     fail "defaults helper ownership or mode is wrong"
+grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-runtime-preflight$' "$LISTING" ||
+    fail "runtime preflight ownership or mode is wrong"
+grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-start-desktop$' "$LISTING" ||
+    fail "desktop startup helper ownership or mode is wrong"
 grep -Eq '^-rwxr-xr-x +1000/1000 +.* ./home/hedgeyos/Desktop/Terminal.desktop$' "$LISTING" ||
     fail "desktop launcher ownership or mode is wrong"
 grep -Fq "devilspie2" "$PROVENANCE" ||

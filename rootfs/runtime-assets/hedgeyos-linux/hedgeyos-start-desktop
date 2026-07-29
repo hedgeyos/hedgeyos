@@ -1,0 +1,74 @@
+#!/bin/bash
+set -u
+
+if [ "${HEDGEYOS_DBUS_SESSION_ACTIVE:-0}" != 1 ]; then
+    export HEDGEYOS_DBUS_SESSION_ACTIVE=1
+    if command -v dbus-run-session >/dev/null 2>&1; then
+        exec dbus-run-session -- "$0"
+    fi
+    exec dbus-launch --exit-with-session "$0"
+fi
+
+mkdir -p "$XDG_RUNTIME_DIR" /home/hedgeyos/Downloads \
+    /home/hedgeyos/.cache/sessions /tmp/hedgeyos-session
+chmod 700 "$XDG_RUNTIME_DIR"
+rm -f /home/hedgeyos/.cache/sessions/*
+
+export XDG_CONFIG_HOME=/home/hedgeyos/.config
+export XDG_CACHE_HOME=/home/hedgeyos/.cache
+export XDG_DATA_HOME=/home/hedgeyos/.local/share
+: > "$HEDGEYOS_SESSION_LOG"
+
+set +e
+exec >>"$HEDGEYOS_SESSION_LOG" 2>&1
+echo "hedgeyos xfce startup: DISPLAY=$DISPLAY XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
+xfconf-query -c xfce4-session -p /general/SaveOnExit -n -t bool -s false || true
+xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false || true
+startxfce4 &
+session_pid=$!
+for _ in $(seq 1 10); do
+    pgrep -x xfce4-session >/dev/null 2>&1 && break
+    sleep 1
+done
+sleep 7
+if [ -x /usr/local/libexec/hedgeyos-apply-defaults ]; then
+    echo "hedgeyos xfce startup: applying versioned defaults"
+    /usr/local/libexec/hedgeyos-apply-defaults || true
+fi
+if ! pgrep -x xfwm4 >/dev/null 2>&1; then
+    echo "hedgeyos xfce startup: starting xfwm4 fallback"
+    xfwm4 --replace --sm-client-disable --compositor=off &
+fi
+if ! pgrep -x xfdesktop >/dev/null 2>&1; then
+    echo "hedgeyos xfce startup: starting xfdesktop fallback"
+    xfdesktop &
+fi
+if ! pgrep -x xfce4-panel >/dev/null 2>&1; then
+    echo "hedgeyos xfce startup: starting xfce4-panel fallback"
+    xfce4-panel &
+fi
+sleep 2
+
+wallpaper=/usr/share/backgrounds/hedgeyos/hedgeyos-wallpaper.png
+xrandr --listmonitors 2>/dev/null || true
+candidate_bases="/backdrop/screen0/monitor0/workspace0 /backdrop/screen0/monitorVirtual-1/workspace0 /backdrop/screen0/monitorDefault/workspace0"
+monitors="$(xrandr --listmonitors 2>/dev/null | tail -n +2 | while read -r index flags geometry name rest; do echo "$name"; done)"
+for monitor in $monitors; do
+    candidate_bases="$candidate_bases /backdrop/screen0/monitor${monitor}/workspace0"
+done
+saved_bases="$(xfconf-query -c xfce4-desktop -l 2>/dev/null | while read -r property; do
+    case "$property" in
+        */last-image) echo "${property%/last-image}" ;;
+    esac
+done)"
+bases="$saved_bases $candidate_bases"
+for base in $bases; do
+    xfconf-query -c xfce4-desktop -p "$base/color-style" -n -t int -s 0 || true
+    xfconf-query -c xfce4-desktop -p "$base/image-style" -n -t int -s 5 || true
+    xfconf-query -c xfce4-desktop -p "$base/last-image" -n -t string -s "$wallpaper" || true
+    xfconf-query -c xfce4-desktop -p "$base/last-single-image" -n -t string -s "$wallpaper" || true
+done
+xfdesktop --reload || true
+xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E "last-image|image-style" || true
+ps -e -o pid,comm | grep -E "xfwm4|xfdesktop|xfce4-panel|xfce4-session" || true
+wait "$session_pid"

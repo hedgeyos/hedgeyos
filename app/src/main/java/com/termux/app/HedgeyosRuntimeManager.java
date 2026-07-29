@@ -20,8 +20,8 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -157,9 +157,9 @@ public final class HedgeyosRuntimeManager {
                 processToStop.destroyForcibly();
             }
         }
-        HedgeyosX11Bridge.stopServer();
-        cleanupStaleDesktopProcesses(appContext, new File(logDir(appContext), "desktop.log"));
-        deleteFile(lockFile(appContext));
+        File desktopLog = new File(logDir(appContext), "desktop.log");
+        stopOwnedDesktopProcesses(appContext, desktopLog);
+        HedgeyosX11Bridge.stopServer(appContext, x11PidFile(appContext), desktopLog);
         setState(appContext, isRootfsInstalled(appContext) ? STATE_READY : STATE_NOT_INSTALLED, "hedgeyos desktop is stopped.");
     }
 
@@ -212,6 +212,14 @@ public final class HedgeyosRuntimeManager {
             return "No hedgeyos logs have been written yet.";
         }
         return result.toString();
+    }
+
+    public static String readLinuxRuntimeReport(Context context) {
+        String report = readFile(new File(publicLogDir(context), "linux-runtime-report.txt")).trim();
+        if (report.isEmpty()) {
+            return "No Linux runtime report has been generated yet. Start or restart the desktop to run the preflight checks.";
+        }
+        return report;
     }
 
     private static void ensureInstalled(Context context) throws Exception {
@@ -291,136 +299,59 @@ public final class HedgeyosRuntimeManager {
         }
 
         File desktopLog = new File(logDir(context), "desktop.log");
-        File x11TmpDir = x11TmpDir(context);
-        cleanupStaleDesktopProcesses(context, desktopLog);
-        mkdirs(x11TmpDir);
+        stopOwnedDesktopProcesses(context, desktopLog);
+        HedgeyosX11Bridge.stopServer(context, x11PidFile(context), desktopLog);
+        HedgeyosGuestRuntime.Layout runtime = guestRuntime(context);
+        HedgeyosGuestRuntime.prepare(runtime, rootfsDir(context), true);
         setState(context, STATE_STARTING_X11, "Starting embedded Termux:X11 server.");
-        HedgeyosX11Bridge.startServer(context, x11TmpDir, desktopLog);
+        HedgeyosX11Bridge.startServer(context, runtime.tmp, desktopLog, x11PidFile(context));
 
-        setState(context, STATE_STARTING_DESKTOP, "Starting Debian XFCE through bundled PRoot.");
-        mkdirs(tmpDir(context));
-        mkdirs(runDir(context));
-        mkdirs(exportDir(context));
-        mkdirs(publicLogDir(context));
-        mkdirs(new File(rootfsDir(context), "home/hedgeyos/Downloads"));
-        mkdirs(new File(rootfsDir(context), "home/hedgeyos/Logs"));
-        mkdirs(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));
-
-        appendLog(desktopLog, "Starting hedgeyos desktop supervisor.");
-
-        List<String> command = new ArrayList<>();
-        command.add(prootBinary(context).getAbsolutePath());
-        command.add("--rootfs=" + rootfsDir(context).getAbsolutePath());
-        command.add("--link2symlink");
-        command.add("--kill-on-exit");
-        command.add("--sysvipc");
-        command.add("--ashmem-memfd");
-        command.add("--change-id=0:0");
-        command.add("--bind=/dev");
-        command.add("--bind=/proc");
-        command.add("--bind=/sys");
-        command.add("--bind=" + x11TmpDir.getAbsolutePath() + ":/tmp");
-        command.add("--bind=" + exportDir(context).getAbsolutePath() + ":/home/hedgeyos/Downloads");
-        command.add("--bind=" + publicLogDir(context).getAbsolutePath() + ":/home/hedgeyos/Logs");
-        command.add("--cwd=/home/hedgeyos");
-        command.add("/usr/bin/env");
-        command.add("-i");
-        command.add("HOME=/home/hedgeyos");
-        command.add("USER=root");
-        command.add("LOGNAME=root");
-        command.add("SHELL=/bin/bash");
-        command.add("DISPLAY=" + HedgeyosX11Bridge.DISPLAY);
-        command.add("LANG=C.UTF-8");
-        command.add("TMPDIR=/tmp");
-        command.add("XDG_RUNTIME_DIR=/tmp/hedgeyos-runtime");
-        command.add("HEDGEYOS_SESSION_LOG=/home/hedgeyos/Logs/xfce-session.log");
-        command.add("PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
-        command.add("/bin/bash");
-        command.add("-lc");
-        command.add(desktopStartupCommand());
-
-        ProcessBuilder builder = new ProcessBuilder(command);
-        builder.directory(filesDir(context));
-        builder.redirectErrorStream(true);
-        builder.redirectOutput(ProcessBuilder.Redirect.appendTo(desktopLog));
-        builder.environment().put("HOME", TermuxConstants.TERMUX_HOME_DIR_PATH);
-        builder.environment().put("PATH", TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":/system/bin");
-        builder.environment().put("LD_LIBRARY_PATH", TermuxConstants.TERMUX_LIB_PREFIX_DIR_PATH);
-        builder.environment().put("PREFIX", TermuxConstants.TERMUX_PREFIX_DIR_PATH);
-        builder.environment().put("TMPDIR", x11TmpDir.getAbsolutePath());
-        builder.environment().put("PROOT_LOADER", prootLoader(context).getAbsolutePath());
-        builder.environment().put("PROOT_TMP_DIR", tmpDir(context).getAbsolutePath());
-
-        Process process = builder.start();
-        synchronized (LOCK) {
-            sDesktopProcess = process;
-        }
-        writeFile(lockFile(context), "started\n");
-
-        Thread.sleep(DESKTOP_START_GRACE_MS);
         try {
-            int exitCode = process.exitValue();
+            runLinuxRuntimePreflight(context, desktopLog);
+            setState(context, STATE_STARTING_DESKTOP, "Starting Debian XFCE through bundled PRoot.");
+            appendLog(desktopLog, "Starting hedgeyos desktop supervisor.");
+
+            List<String> command = buildDebianCommand(context, desktopStartupCommand(),
+                "0:0", "/home/hedgeyos", "root", true);
+            ProcessBuilder builder = createDebianProcessBuilder(context, command, desktopLog);
+            Process process = builder.start();
             synchronized (LOCK) {
-                if (sDesktopProcess == process) {
+                sDesktopProcess = process;
+            }
+            HedgeyosProcessOwner.recordMatching(
+                desktopPidFile(context),
+                prootBinary(context).getAbsolutePath(),
+                "--rootfs=" + rootfsDir(context).getAbsolutePath(),
+                "--kill-on-exit");
+
+            Thread.sleep(DESKTOP_START_GRACE_MS);
+            try {
+                int exitCode = process.exitValue();
+                synchronized (LOCK) {
+                    if (sDesktopProcess == process) {
+                        sDesktopProcess = null;
+                    }
+                }
+                HedgeyosProcessOwner.clear(desktopPidFile(context));
+                throw new IOException("Desktop supervisor exited during startup with code " + exitCode + ". Open hedgeyos logs for details.");
+            } catch (IllegalThreadStateException stillRunning) {
+                setState(context, STATE_RUNNING, "hedgeyos desktop supervisor is running.");
+            }
+        } catch (Exception e) {
+            synchronized (LOCK) {
+                if (sDesktopProcess != null) {
+                    sDesktopProcess.destroyForcibly();
                     sDesktopProcess = null;
                 }
             }
-            deleteFile(lockFile(context));
-            throw new IOException("Desktop supervisor exited during startup with code " + exitCode + ". Open hedgeyos logs for details.");
-        } catch (IllegalThreadStateException stillRunning) {
-            setState(context, STATE_RUNNING, "hedgeyos desktop supervisor is running.");
+            stopOwnedDesktopProcesses(context, desktopLog);
+            HedgeyosX11Bridge.stopServer(context, x11PidFile(context), desktopLog);
+            throw e;
         }
     }
 
     private static String desktopStartupCommand() {
-        return
-            "set -u\n" +
-            "mkdir -p \"$XDG_RUNTIME_DIR\" /home/hedgeyos/Downloads /home/hedgeyos/.cache/sessions /tmp/hedgeyos-session\n" +
-            "chmod 700 \"$XDG_RUNTIME_DIR\"\n" +
-            "rm -f /home/hedgeyos/.cache/sessions/*\n" +
-            "export XDG_CONFIG_HOME=/home/hedgeyos/.config\n" +
-            "export XDG_CACHE_HOME=/home/hedgeyos/.cache\n" +
-            "export XDG_DATA_HOME=/home/hedgeyos/.local/share\n" +
-            ": > \"$HEDGEYOS_SESSION_LOG\"\n" +
-            "exec dbus-launch --exit-with-session /bin/bash -lc '\n" +
-            "  set +e\n" +
-            "  exec >>\"$HEDGEYOS_SESSION_LOG\" 2>&1\n" +
-            "  echo \"hedgeyos xfce startup: DISPLAY=$DISPLAY XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR\"\n" +
-            "  xfconf-query -c xfce4-session -p /general/SaveOnExit -n -t bool -s false || true\n" +
-            "  xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false || true\n" +
-            "  startxfce4 &\n" +
-            "  session_pid=$!\n" +
-            "  for i in $(seq 1 10); do\n" +
-            "    pgrep -x xfce4-session >/dev/null 2>&1 && break\n" +
-            "    sleep 1\n" +
-            "  done\n" +
-            "  sleep 7\n" +
-            "  if [ -x /usr/local/libexec/hedgeyos-apply-defaults ]; then\n" +
-            "    echo \"hedgeyos xfce startup: applying versioned defaults\"\n" +
-            "    /usr/local/libexec/hedgeyos-apply-defaults || true\n" +
-            "  fi\n" +
-            "  if ! pgrep -x xfwm4 >/dev/null 2>&1; then echo \"hedgeyos xfce startup: starting xfwm4 fallback\"; xfwm4 --replace --sm-client-disable --compositor=off & fi\n" +
-            "  if ! pgrep -x xfdesktop >/dev/null 2>&1; then echo \"hedgeyos xfce startup: starting xfdesktop fallback\"; xfdesktop & fi\n" +
-            "  if ! pgrep -x xfce4-panel >/dev/null 2>&1; then echo \"hedgeyos xfce startup: starting xfce4-panel fallback\"; xfce4-panel & fi\n" +
-            "  sleep 2\n" +
-            "  wallpaper=/usr/share/backgrounds/hedgeyos/hedgeyos-wallpaper.png\n" +
-            "  xrandr --listmonitors 2>/dev/null || true\n" +
-            "  candidate_bases=\"/backdrop/screen0/monitor0/workspace0 /backdrop/screen0/monitorVirtual-1/workspace0 /backdrop/screen0/monitorDefault/workspace0\"\n" +
-            "  monitors=\"$(xrandr --listmonitors 2>/dev/null | tail -n +2 | while read index flags geometry name rest; do echo \"$name\"; done)\"\n" +
-            "  for monitor in $monitors; do candidate_bases=\"$candidate_bases /backdrop/screen0/monitor${monitor}/workspace0\"; done\n" +
-            "  saved_bases=\"$(xfconf-query -c xfce4-desktop -l 2>/dev/null | while read property; do case \"$property\" in */last-image) echo \"${property%/last-image}\";; esac; done)\"\n" +
-            "  bases=\"$saved_bases $candidate_bases\"\n" +
-            "  for base in $bases; do\n" +
-            "    xfconf-query -c xfce4-desktop -p \"$base/color-style\" -n -t int -s 0 || true\n" +
-            "    xfconf-query -c xfce4-desktop -p \"$base/image-style\" -n -t int -s 5 || true\n" +
-            "    xfconf-query -c xfce4-desktop -p \"$base/last-image\" -n -t string -s \"$wallpaper\" || true\n" +
-            "    xfconf-query -c xfce4-desktop -p \"$base/last-single-image\" -n -t string -s \"$wallpaper\" || true\n" +
-            "  done\n" +
-            "  xfdesktop --reload || true\n" +
-            "  xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E \"last-image|image-style\" || true\n" +
-            "  ps -e -o pid,comm | grep -E \"xfwm4|xfdesktop|xfce4-panel|xfce4-session\" || true\n" +
-            "  wait \"$session_pid\"\n" +
-            "'";
+        return "exec /usr/local/libexec/hedgeyos-start-desktop";
     }
 
     private static void openDebianTerminal(Context context) throws Exception {
@@ -435,27 +366,16 @@ public final class HedgeyosRuntimeManager {
         }
 
         File desktopLog = new File(logDir(context), "desktop.log");
-        File x11TmpDir = x11TmpDir(context);
-        mkdirs(x11TmpDir);
+        HedgeyosGuestRuntime.prepare(guestRuntime(context), rootfsDir(context), false);
         mkdirs(exportDir(context));
         mkdirs(new File(rootfsDir(context), "home/hedgeyos/Downloads"));
 
         List<String> command = buildDebianCommand(context,
-            "mkdir -p \"$XDG_RUNTIME_DIR\" /home/hedgeyos/Downloads && chmod 700 \"$XDG_RUNTIME_DIR\" && " +
+            "mkdir -p /home/hedgeyos/Downloads && " +
                 "exec xfce4-terminal --title 'hedgeyos Debian Terminal' --command " +
                 "\"/bin/bash -lc 'cat /etc/os-release; exec /bin/bash -l'\"");
 
-        ProcessBuilder builder = new ProcessBuilder(command);
-        builder.directory(filesDir(context));
-        builder.redirectErrorStream(true);
-        builder.redirectOutput(ProcessBuilder.Redirect.appendTo(desktopLog));
-        builder.environment().put("HOME", TermuxConstants.TERMUX_HOME_DIR_PATH);
-        builder.environment().put("PATH", TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":/system/bin");
-        builder.environment().put("LD_LIBRARY_PATH", TermuxConstants.TERMUX_LIB_PREFIX_DIR_PATH);
-        builder.environment().put("PREFIX", TermuxConstants.TERMUX_PREFIX_DIR_PATH);
-        builder.environment().put("TMPDIR", x11TmpDir.getAbsolutePath());
-        builder.environment().put("PROOT_LOADER", prootLoader(context).getAbsolutePath());
-        builder.environment().put("PROOT_TMP_DIR", tmpDir(context).getAbsolutePath());
+        ProcessBuilder builder = createDebianProcessBuilder(context, command, desktopLog);
 
         appendLog(desktopLog, "Opening Debian XFCE terminal.");
         builder.start();
@@ -489,17 +409,7 @@ public final class HedgeyosRuntimeManager {
                 "echo '== hello =='; hello; " +
                 "echo '== dpkg hello =='; dpkg-query -W -f='${Package} ${Version} ${Status}\\n' hello");
 
-        ProcessBuilder builder = new ProcessBuilder(command);
-        builder.directory(filesDir(context));
-        builder.redirectErrorStream(true);
-        builder.redirectOutput(ProcessBuilder.Redirect.appendTo(acceptanceLog));
-        builder.environment().put("HOME", TermuxConstants.TERMUX_HOME_DIR_PATH);
-        builder.environment().put("PATH", TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":/system/bin");
-        builder.environment().put("LD_LIBRARY_PATH", TermuxConstants.TERMUX_LIB_PREFIX_DIR_PATH);
-        builder.environment().put("PREFIX", TermuxConstants.TERMUX_PREFIX_DIR_PATH);
-        builder.environment().put("TMPDIR", x11TmpDir(context).getAbsolutePath());
-        builder.environment().put("PROOT_LOADER", prootLoader(context).getAbsolutePath());
-        builder.environment().put("PROOT_TMP_DIR", tmpDir(context).getAbsolutePath());
+        ProcessBuilder builder = createDebianProcessBuilder(context, command, acceptanceLog);
 
         appendLog(context, "debian-acceptance", "Starting Debian acceptance command.");
         Process process = builder.start();
@@ -515,45 +425,93 @@ public final class HedgeyosRuntimeManager {
     }
 
     private static List<String> buildDebianCommand(Context context, String shellCommand) {
-        return buildDebianCommand(context, shellCommand, "0:0", "/home/hedgeyos", "root");
+        return buildDebianCommand(context, shellCommand, "0:0", "/home/hedgeyos", "root", false);
     }
 
     private static List<String> buildDebianRootCommand(Context context, String shellCommand) {
-        return buildDebianCommand(context, shellCommand, "0:0", "/root", "root");
+        return buildDebianCommand(context, shellCommand, "0:0", "/root", "root", false);
     }
 
-    private static List<String> buildDebianCommand(Context context, String shellCommand, String changeId, String home, String user) {
-        File x11TmpDir = x11TmpDir(context);
-        List<String> command = new ArrayList<>();
-        command.add(prootBinary(context).getAbsolutePath());
-        command.add("--rootfs=" + rootfsDir(context).getAbsolutePath());
-        command.add("--link2symlink");
-        command.add("--sysvipc");
-        command.add("--ashmem-memfd");
-        command.add("--change-id=" + changeId);
-        command.add("--bind=/dev");
-        command.add("--bind=/proc");
-        command.add("--bind=/sys");
-        command.add("--bind=" + x11TmpDir.getAbsolutePath() + ":/tmp");
-        command.add("--bind=" + exportDir(context).getAbsolutePath() + ":/home/hedgeyos/Downloads");
-        command.add("--bind=" + publicLogDir(context).getAbsolutePath() + ":/home/hedgeyos/Logs");
-        command.add("--cwd=" + home);
-        command.add("/usr/bin/env");
-        command.add("-i");
-        command.add("HOME=" + home);
-        command.add("USER=" + user);
-        command.add("LOGNAME=" + user);
-        command.add("SHELL=/bin/bash");
-        command.add("DISPLAY=" + HedgeyosX11Bridge.DISPLAY);
-        command.add("LANG=C.UTF-8");
-        command.add("TMPDIR=/tmp");
-        command.add("XDG_RUNTIME_DIR=/tmp/hedgeyos-runtime");
-        command.add("HEDGEYOS_SESSION_LOG=/home/hedgeyos/Logs/xfce-session.log");
-        command.add("PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin");
-        command.add("/bin/bash");
-        command.add("-lc");
-        command.add(shellCommand);
-        return command;
+    private static List<String> buildDebianCommand(Context context, String shellCommand, String changeId,
+                                                   String home, String user, boolean killOnExit) {
+        return HedgeyosGuestRuntime.buildCommand(
+            prootBinary(context),
+            rootfsDir(context),
+            guestRuntime(context),
+            exportDir(context),
+            publicLogDir(context),
+            shellCommand,
+            changeId,
+            home,
+            user,
+            HedgeyosX11Bridge.DISPLAY,
+            killOnExit);
+    }
+
+    private static ProcessBuilder createDebianProcessBuilder(Context context, List<String> command,
+                                                             File outputLog) throws IOException {
+        HedgeyosGuestRuntime.Layout runtime = guestRuntime(context);
+        HedgeyosGuestRuntime.prepare(runtime, rootfsDir(context), false);
+        mkdirs(tmpDir(context));
+        mkdirs(exportDir(context));
+        mkdirs(publicLogDir(context));
+        mkdirs(new File(rootfsDir(context), "home/hedgeyos/Downloads"));
+        mkdirs(new File(rootfsDir(context), "home/hedgeyos/Logs"));
+        mkdirs(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));
+
+        ProcessBuilder builder = new ProcessBuilder(command);
+        builder.directory(filesDir(context));
+        builder.redirectErrorStream(true);
+        builder.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLog));
+        builder.environment().put("HOME", TermuxConstants.TERMUX_HOME_DIR_PATH);
+        builder.environment().put("PATH", TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":/system/bin");
+        builder.environment().put("LD_LIBRARY_PATH", TermuxConstants.TERMUX_LIB_PREFIX_DIR_PATH);
+        builder.environment().put("PREFIX", TermuxConstants.TERMUX_PREFIX_DIR_PATH);
+        builder.environment().put("TMPDIR", runtime.tmp.getAbsolutePath());
+        builder.environment().put("PROOT_LOADER", prootLoader(context).getAbsolutePath());
+        builder.environment().put("PROOT_TMP_DIR", tmpDir(context).getAbsolutePath());
+        return builder;
+    }
+
+    private static void runLinuxRuntimePreflight(Context context, File desktopLog) throws Exception {
+        String command =
+            "set +e\n" +
+            "report=\"$HEDGEYOS_RUNTIME_REPORT\"\n" +
+            "temporary=\"${report}.tmp.$$\"\n" +
+            "trap 'rm -f \"$temporary\"' EXIT INT TERM\n" +
+            "/usr/local/libexec/hedgeyos-runtime-preflight >\"$temporary\" 2>&1\n" +
+            "code=$?\n" +
+            "mv -f \"$temporary\" \"$report\"\n" +
+            "trap - EXIT INT TERM\n" +
+            "exit \"$code\"";
+        ProcessBuilder builder = createDebianProcessBuilder(
+            context, buildDebianRootCommand(context, command), desktopLog);
+        appendLog(desktopLog, "Running generic Linux runtime preflight.");
+        Process process = builder.start();
+        if (!process.waitFor(45, TimeUnit.SECONDS)) {
+            process.destroyForcibly();
+            throw new IOException("Linux runtime preflight timed out.");
+        }
+        int exitCode = process.exitValue();
+        String report = readLinuxRuntimeReport(context);
+        appendLog(context, "runtime", "Linux runtime preflight exited with code " + exitCode + ".\n" + report);
+        if (exitCode != 0) {
+            throw new IOException("Linux runtime preflight failed with exit code " + exitCode +
+                ". Open Linux Runtime Report for details.");
+        }
+    }
+
+    private static void stopOwnedDesktopProcesses(Context context, File desktopLog) {
+        List<Integer> stopped = HedgeyosProcessOwner.stopRecordedAndMatching(
+            desktopPidFile(context),
+            prootBinary(context).getAbsolutePath(),
+            "--rootfs=" + rootfsDir(context).getAbsolutePath(),
+            "--kill-on-exit");
+        if (!stopped.isEmpty()) {
+            appendLog(desktopLog, "Stopped owned hedgeyos desktop PRoot processes: " + stopped + "\n");
+            appendPublicLog(context, desktopLog.getName(),
+                "Stopped owned hedgeyos desktop PRoot processes: " + stopped + "\n");
+        }
     }
 
     private static void installProotPayload(Context context) throws Exception {
@@ -636,6 +594,10 @@ public final class HedgeyosRuntimeManager {
         copyBundledAsset(context, HEDGEYOS_WALLPAPER_ASSET, linuxWallpaper);
         installLinuxRuntimeAsset(context, rootfs, "hedgeyos-apply-defaults",
             "usr/local/libexec/hedgeyos-apply-defaults", 0755);
+        installLinuxRuntimeAsset(context, rootfs, "hedgeyos-runtime-preflight",
+            "usr/local/libexec/hedgeyos-runtime-preflight", 0755);
+        installLinuxRuntimeAsset(context, rootfs, "hedgeyos-start-desktop",
+            "usr/local/libexec/hedgeyos-start-desktop", 0755);
         installLinuxRuntimeAsset(context, rootfs, "hedgeyos-window-rules.desktop",
             "etc/xdg/autostart/hedgeyos-window-rules.desktop", 0644);
         installLinuxRuntimeAsset(context, rootfs, "hedgeyos-window-rules.lua",
@@ -690,23 +652,12 @@ public final class HedgeyosRuntimeManager {
                 copiedPackages + ".");
         }
 
-        mkdirs(x11TmpDir(context));
-        mkdirs(tmpDir(context));
         File migrationLog = new File(logDir(context), "linux-migration.log");
         List<String> command = buildDebianRootCommand(context,
             "set -e; export DEBIAN_FRONTEND=noninteractive; " +
                 "dpkg -i /var/cache/hedgeyos-migration-packages/*.deb; " +
                 "rm -rf /var/cache/hedgeyos-migration-packages");
-        ProcessBuilder builder = new ProcessBuilder(command);
-        builder.directory(filesDir(context));
-        builder.redirectErrorStream(true);
-        builder.redirectOutput(ProcessBuilder.Redirect.appendTo(migrationLog));
-        builder.environment().put("HOME", TermuxConstants.TERMUX_HOME_DIR_PATH);
-        builder.environment().put("PATH", TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":/system/bin");
-        builder.environment().put("LD_LIBRARY_PATH", TermuxConstants.TERMUX_LIB_PREFIX_DIR_PATH);
-        builder.environment().put("TMPDIR", x11TmpDir(context).getAbsolutePath());
-        builder.environment().put("PROOT_LOADER", prootLoader(context).getAbsolutePath());
-        builder.environment().put("PROOT_TMP_DIR", tmpDir(context).getAbsolutePath());
+        ProcessBuilder builder = createDebianProcessBuilder(context, command, migrationLog);
 
         appendLog(migrationLog, "Installing offline Linux window-policy migration.");
         Process process = builder.start();
@@ -724,10 +675,13 @@ public final class HedgeyosRuntimeManager {
     private static void ensureDirectories(Context context) throws IOException {
         mkdirs(assetDir(context));
         mkdirs(logDir(context));
-        mkdirs(runDir(context));
         mkdirs(stateDir(context));
         mkdirs(exportDir(context));
         mkdirs(tmpDir(context));
+        HedgeyosGuestRuntime.prepare(
+            guestRuntime(context),
+            rootfsDir(context).isDirectory() ? rootfsDir(context) : null,
+            false);
     }
 
     private static File copyRequiredAsset(Context context, String name) throws IOException {
@@ -787,47 +741,6 @@ public final class HedgeyosRuntimeManager {
         }
     }
 
-    private static void cleanupStaleDesktopProcesses(Context context, File logFile) {
-        try {
-            mkdirs(logFile.getParentFile());
-            mkdirs(x11TmpDir(context));
-            String command =
-                "me=\"$(id -un)\"\n" +
-                "patterns='hedgeyos-x11|xfce4-session|xfce4-panel|xfdesktop|xfwm4|xfsettingsd|xfconfd|dbus-daemon|dbus-launch|Thunar|proot'\n" +
-                "pids=\"$(ps -A -o PID,USER,ARGS 2>/dev/null | awk -v me=\"$me\" -v patterns=\"$patterns\" '$2 == me && $0 ~ patterns { print $1 }')\"\n" +
-                "for pid in $pids; do [ \"$pid\" = \"$$\" ] || kill \"$pid\" 2>/dev/null || true; done\n" +
-                "sleep 1\n" +
-                "for pid in $pids; do [ \"$pid\" = \"$$\" ] || kill -9 \"$pid\" 2>/dev/null || true; done\n" +
-                "rm -rf " + quote(new File(x11TmpDir(context), ".X11-unix").getAbsolutePath()) + " " +
-                    quote(new File(x11TmpDir(context), ".ICE-unix").getAbsolutePath()) + " " +
-                    quote(new File(x11TmpDir(context), "hedgeyos-runtime").getAbsolutePath()) + " " +
-                    quote(x11TmpDir(context).getAbsolutePath()) + "/dbus-* " +
-                    quote(new File(x11TmpDir(context), ".X1-lock").getAbsolutePath()) + "\n" +
-                "mkdir -p " + quote(x11TmpDir(context).getAbsolutePath()) + "\n" +
-                "chmod 1777 " + quote(x11TmpDir(context).getAbsolutePath()) + " 2>/dev/null || true\n" +
-                "printf 'cleaned stale hedgeyos desktop processes: %s\\n' \"$pids\"\n";
-
-            ProcessBuilder builder = new ProcessBuilder("/system/bin/sh", "-c", command);
-            builder.directory(filesDir(context));
-            builder.redirectErrorStream(true);
-            Process process = builder.start();
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            try (InputStream input = process.getInputStream()) {
-                byte[] buffer = new byte[8192];
-                int read;
-                while ((read = input.read(buffer)) != -1) {
-                    output.write(buffer, 0, read);
-                }
-            }
-            int exitCode = process.waitFor();
-            String text = output.toString("UTF-8");
-            appendLog(logFile, text + "exit=" + exitCode + "\n");
-            appendPublicLog(context, logFile.getName(), text + "exit=" + exitCode + "\n");
-        } catch (Exception e) {
-            appendLog(context, "desktop", "Failed to clean stale hedgeyos desktop processes: " + (e.getMessage() == null ? e.toString() : e.getMessage()));
-        }
-    }
-
     private static String readExpectedSha(File checksumFile) throws IOException {
         String line = readFile(checksumFile).trim();
         if (line.length() < 64) {
@@ -855,8 +768,8 @@ public final class HedgeyosRuntimeManager {
     private static void setState(Context context, String state, String detail) {
         try {
             mkdirs(stateDir(context));
-            writeFile(stateFile(context), state + "\n");
-            writeFile(detailFile(context), detail + "\n");
+            writeAtomicFile(stateFile(context), state + "\n");
+            writeAtomicFile(detailFile(context), detail + "\n");
             appendLog(context, "runtime", state + ": " + detail);
             writePublicFile(context, "runtime.state", state + "\n");
             writePublicFile(context, "runtime.detail", detail + "\n");
@@ -907,6 +820,26 @@ public final class HedgeyosRuntimeManager {
         }
         try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
             writer.write(content);
+        }
+    }
+
+    private static void writeAtomicFile(File file, String content) throws IOException {
+        mkdirs(file.getParentFile());
+        File temporary = new File(file.getParentFile(), file.getName() + ".tmp." +
+            Long.toUnsignedString(System.nanoTime(), 36));
+        try {
+            try (FileOutputStream output = new FileOutputStream(temporary)) {
+                output.write(content.getBytes(StandardCharsets.UTF_8));
+                output.getFD().sync();
+            }
+            try {
+                Files.move(temporary.toPath(), file.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException atomicMoveFailed) {
+                Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            deleteFile(temporary);
         }
     }
 
@@ -965,7 +898,7 @@ public final class HedgeyosRuntimeManager {
     private static void writePublicFile(Context context, String name, String content) {
         try {
             File file = new File(publicLogDir(context), name);
-            writeFile(file, content);
+            writeAtomicFile(file, content);
         } catch (IOException ignored) {
         }
     }
@@ -1059,16 +992,12 @@ public final class HedgeyosRuntimeManager {
         return new File(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "hedgeyos"), "logs");
     }
 
-    private static File runDir(Context context) {
-        return new File(filesDir(context), "run");
-    }
-
     private static File tmpDir(Context context) {
         return new File(filesDir(context), "tmp");
     }
 
-    private static File x11TmpDir(Context context) {
-        return new File(rootfsDir(context), "tmp");
+    private static HedgeyosGuestRuntime.Layout guestRuntime(Context context) {
+        return HedgeyosGuestRuntime.layout(filesDir(context));
     }
 
     private static File exportDir(Context context) {
@@ -1087,8 +1016,12 @@ public final class HedgeyosRuntimeManager {
         return new File(stateDir(context), "runtime.detail");
     }
 
-    private static File lockFile(Context context) {
-        return new File(runDir(context), "desktop.lock");
+    private static File desktopPidFile(Context context) {
+        return new File(guestRuntime(context).processes, "desktop.pid");
+    }
+
+    private static File x11PidFile(Context context) {
+        return new File(guestRuntime(context).processes, "x11.pid");
     }
 
     private static File prootBinary(Context context) {

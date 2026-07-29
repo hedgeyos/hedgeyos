@@ -82,6 +82,10 @@ GitHub Actions workflow:
   customization files, modes, owners, portrait window package, and provenance.
 - Unit CI runs `scripts/test-linux-defaults.sh` to prove migration idempotence
   and preservation of unrelated desktop files.
+- Unit CI runs `scripts/test-linux-runtime.sh` plus
+  `HedgeyosGuestRuntimeTest` to enforce the single PRoot mount contract,
+  `/dev/shm` and `/run` ordering, versioned runtime assets, and the absence of
+  app-specific Chromium workarounds.
 - It uploads a small `hedgeyos-apk-inspection` artifact separately from the large
   APK artifact.
 - It uploads the APK, SHA-256 file, rootfs manifests, build logs, and inspection

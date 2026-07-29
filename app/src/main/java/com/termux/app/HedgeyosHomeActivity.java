@@ -130,6 +130,7 @@ public final class HedgeyosHomeActivity extends Activity {
         panel.addView(button("Stop Desktop", v -> HedgeyosRuntimeService.requestStopDesktop(this)));
         panel.addView(button("Reset Debian", v -> confirmResetDebian()));
         panel.addView(button("Open X11 Surface", v -> openX11Surface()));
+        panel.addView(button("Linux Runtime Report", v -> showLinuxRuntimeReport()));
         panel.addView(button("Open hedgeyos logs", v -> showHedgeyosLogs()));
         panel.addView(button("Open hedgeyos terminal", v -> openHedgeyosTerminal()));
         panel.addView(button("Run Debian APT Check", v -> HedgeyosRuntimeManager.runDebianAcceptanceChecksAsync(this)));
@@ -222,6 +223,24 @@ public final class HedgeyosHomeActivity extends Activity {
 
         new AlertDialog.Builder(this)
             .setTitle("hedgeyos logs")
+            .setView(scrollView)
+            .setPositiveButton("Close", null)
+            .show();
+    }
+
+    private void showLinuxRuntimeReport() {
+        TextView reportText = new TextView(this);
+        reportText.setText(HedgeyosRuntimeManager.readLinuxRuntimeReport(this));
+        reportText.setTextIsSelectable(true);
+        reportText.setTextSize(12);
+        int padding = dp(16);
+        reportText.setPadding(padding, padding, padding, padding);
+
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.addView(reportText);
+
+        new AlertDialog.Builder(this)
+            .setTitle("Linux Runtime Report")
             .setView(scrollView)
             .setPositiveButton("Close", null)
             .show();

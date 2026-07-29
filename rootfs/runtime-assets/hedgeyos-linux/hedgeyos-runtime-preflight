@@ -1,0 +1,150 @@
+#!/bin/sh
+set -u
+
+fatal_count=0
+
+pass() {
+    printf 'PASS|%s|%s\n' "$1" "$2"
+}
+
+warning() {
+    printf 'WARNING|%s|%s\n' "$1" "$2"
+}
+
+unsupported() {
+    printf 'UNSUPPORTED|%s|%s\n' "$1" "$2"
+}
+
+fatal() {
+    fatal_count=$((fatal_count + 1))
+    printf 'FATAL|%s|%s\n' "$1" "$2"
+}
+
+check_directory() {
+    name=$1
+    path=$2
+    expected_mode=$3
+
+    if [ ! -d "$path" ]; then
+        fatal "$name" "$path is missing"
+        return
+    fi
+    mode=$(stat -c '%a' "$path" 2>/dev/null || printf unknown)
+    if [ "$mode" != "$expected_mode" ]; then
+        fatal "$name" "$path mode is $mode, expected $expected_mode"
+        return
+    fi
+    probe="$path/.hedgeyos-write-$$"
+    if (umask 077 && : > "$probe") 2>/dev/null; then
+        rm -f "$probe"
+        pass "$name" "$path is writable with mode $mode"
+    else
+        fatal "$name" "$path is not writable"
+    fi
+}
+
+printf 'hedgeyos Linux runtime report\n'
+printf 'version=1\n'
+printf 'display=%s\n' "${DISPLAY:-unset}"
+printf 'xdg_runtime_dir=%s\n' "${XDG_RUNTIME_DIR:-unset}"
+
+check_directory tmp /tmp 1777
+check_directory shm /dev/shm 1777
+check_directory run /run 755
+check_directory run-lock /run/lock 1777
+check_directory xdg-runtime "${XDG_RUNTIME_DIR:-/run/user/0}" 700
+
+if [ -r /proc/self/status ]; then
+    pass procfs "/proc is visible"
+else
+    fatal procfs "/proc/self/status is unavailable"
+fi
+
+if [ -d /sys ]; then
+    pass sysfs "/sys is visible"
+else
+    warning sysfs "/sys is unavailable"
+fi
+
+if [ -r /proc/sys/fs/inotify/max_user_watches ]; then
+    value=$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || printf unreadable)
+    pass inotify "max_user_watches=$value"
+else
+    warning inotify "Android does not expose max_user_watches to this app"
+fi
+
+socket="/tmp/.X11-unix/X${DISPLAY#:}"
+attempt=0
+while [ ! -S "$socket" ] && [ "$attempt" -lt 25 ]; do
+    attempt=$((attempt + 1))
+    sleep 0.2
+done
+if [ -S "$socket" ]; then
+    pass x11 "$socket is available"
+else
+    fatal x11 "$socket is unavailable"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+    if python3 - <<'PY'
+from multiprocessing import shared_memory
+
+segment = shared_memory.SharedMemory(create=True, size=4096)
+try:
+    segment.buf[0:4] = b"hyos"
+    assert bytes(segment.buf[0:4]) == b"hyos"
+finally:
+    segment.close()
+    segment.unlink()
+PY
+    then
+        pass posix-shm "Python multiprocessing.shared_memory created and unlinked a segment"
+    else
+        fatal posix-shm "Python multiprocessing.shared_memory failed"
+    fi
+
+    if python3 - <<'PY'
+import os
+
+if not hasattr(os, "memfd_create"):
+    raise SystemExit(2)
+fd = os.memfd_create("hedgeyos-preflight")
+try:
+    os.write(fd, b"hedgeyos")
+finally:
+    os.close(fd)
+PY
+    then
+        pass memfd "memfd_create is usable"
+    else
+        warning memfd "memfd_create is unavailable or blocked by the Android kernel"
+    fi
+else
+    unsupported posix-shm "python3 is not installed; directory checks still passed"
+    unsupported memfd "python3 is not installed"
+fi
+
+if command -v dbus-run-session >/dev/null 2>&1; then
+    if dbus-run-session -- sh -c 'test -n "${DBUS_SESSION_BUS_ADDRESS:-}"'; then
+        pass session-dbus "dbus-run-session created a private session bus"
+    else
+        fatal session-dbus "dbus-run-session failed"
+    fi
+elif command -v dbus-launch >/dev/null 2>&1; then
+    warning session-dbus "dbus-run-session is absent; desktop will use dbus-launch"
+else
+    fatal session-dbus "no session D-Bus launcher is installed"
+fi
+
+if [ -S /run/dbus/system_bus_socket ]; then
+    pass system-dbus "/run/dbus/system_bus_socket is available"
+else
+    warning system-dbus "no system bus is provided under unprivileged PRoot"
+fi
+
+if [ "$fatal_count" -gt 0 ]; then
+    printf 'summary=FAILED fatal=%s\n' "$fatal_count"
+    exit 2
+fi
+
+printf 'summary=PASS fatal=0\n'

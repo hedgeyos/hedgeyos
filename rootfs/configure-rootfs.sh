@@ -23,6 +23,7 @@ RUNTIME_ASSETS="$SCRIPT_DIR/runtime-assets"
 
 install -d -o 1000 -g 1000 "$ROOTFS/home/hedgeyos"
 install -d "$ROOTFS/etc/sudoers.d" "$ROOTFS/etc/apt/sources.list.d"
+install -d -m 1777 "$ROOTFS/dev/shm" "$ROOTFS/run/shm" "$ROOTFS/tmp"
 
 grep -q '^hedgeyos:' "$ROOTFS/etc/group" || printf 'hedgeyos:x:1000:\n' >> "$ROOTFS/etc/group"
 grep -q '^hedgeyos:' "$ROOTFS/etc/passwd" || printf 'hedgeyos:x:1000:1000:hedgeyos User:/home/hedgeyos:/bin/bash\n' >> "$ROOTFS/etc/passwd"
