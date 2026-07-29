@@ -260,7 +260,7 @@ static jboolean connected(__unused JNIEnv* env,__unused jclass clazz) {
     return conn_fd != -1;
 }
 
-static void startLogcat(JNIEnv *env, __unused jobject cls, jint fd) {
+static jint startLogcat(JNIEnv *env, __unused jobject cls, jint fd) {
     log(DEBUG, "Starting logcat with output to given fd");
     lorieDebugEnabled = true;
 
@@ -268,7 +268,7 @@ static void startLogcat(JNIEnv *env, __unused jobject cls, jint fd) {
     switch(pid) {
         case -1:
             log(ERROR, "fork: %s", strerror(errno));
-            return;
+            return -1;
         case 0:
             dup2(fd, 1);
             dup2(fd, 2);
@@ -278,9 +278,10 @@ static void startLogcat(JNIEnv *env, __unused jobject cls, jint fd) {
             execl("/system/bin/logcat", "logcat", buf, NULL);
             log(ERROR, "exec logcat: %s", strerror(errno));
             (*env)->FatalError(env, "Exiting");
-            return;
+            _exit(127);
         default:
             startLogcatChildReaper(pid);
+            return pid;
     }
 }
 
@@ -411,7 +412,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, __unused void *reserved) {
             {"setFiltering", "(I)V", (void *)&rendererSetFiltering},
             {"connect", "(I)V", (void *)&connect_},
             {"connected", "()Z", (void *)&connected},
-            {"startLogcat", "(I)V", (void *)&startLogcat},
+            {"startLogcat", "(I)I", (void *)&startLogcat},
             {"setClipboardSyncEnabled", "(ZZ)V", (void *)&setClipboardSyncEnabled},
             {"sendClipboardAnnounce", "()V", (void *)&sendClipboardAnnounce},
             {"sendClipboardEvent", "([B)V", (void *)&sendClipboardEvent},

@@ -94,9 +94,10 @@ diagnostic builds may instead set `HEDGEYOS_X11_DEBUG=1`; release, CI, and
 normal local builds default to `0`.
 
 Diagnostic cleanup never scans for arbitrary logcat processes. The native X11
-launcher records its actual child PID, native waiter threads reap exited
-children, and Android cleanup requires the same app UID, the recorded X11
-parent PID, and exact `logcat --pid <x11-pid>` arguments.
+launcher and Android renderer each record their actual child PID, and native
+waiter threads reap exited children. Android cleanup requires the same app UID,
+the recorded X11 or app parent PID, and the exact
+`logcat --pid <x11-pid>` or `logcat --pid=<app-pid>` arguments.
 
 ## Runtime Preflight
 

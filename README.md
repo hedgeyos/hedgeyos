@@ -1,178 +1,174 @@
-# hedgeyos
+# HedgeyOS
 
-Turn an Android phone into a Debian graphical workstation and Home launcher.
+<p align="center">
+  <img src="app/src/main/res/drawable-nodpi/hedgeyos_icon.png" width="160" alt="HedgeyOS hedgehog">
+</p>
 
-[Download hedgeyos v0.1.0-alpha.4 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.4/hedgeyos-arm64-v8a-alpha.4-test-signed.apk)
+**A pocket Debian workstation that turns an ARM64 Android device into a
+storybook-inspired XFCE desktop.**
 
-Current status: `v0.1.0-alpha.4` is published as a GitHub prerelease and has
-device smoke-test evidence on an attached ARM64 phone. The alpha boots into the
-bundled Debian 13/XFCE desktop as the Android Home screen, starts embedded
-Termux:X11 from inside the hedgeyos APK, opens Debian desktop apps, exposes the
-hedgeyos recovery menu, and applies the hedgeyos wallpaper/icon branding on the
-Android and Linux sides. On-device acceptance covers a true fresh install,
-background-survival onboarding, runtime wake-lock release/reacquisition, window
-placement, overlay drag/rotation, `apt update`, and installation and execution
-of a Debian package.
+HedgeyOS packages Debian 13, XFCE, an embedded X11 server, and its Android
+launcher into one app. Open it like an ordinary Android app or choose it as
+your Home screen, then use familiar Linux terminals, files, editors, browsers,
+APT packages, and development tools directly on your phone or tablet.
 
-This is still an alpha. Final `v0.1.0` has not been tagged: before that, the
-remaining release gate is a broader acceptance pass with production signing,
-direct Reset Debian evidence, and final release checks. See
-[`docs/TEST-REPORT.md`](docs/TEST-REPORT.md) for the current evidence.
+[Download HedgeyOS v0.1.0-alpha.5 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.5/hedgeyos-arm64-v8a-alpha.5-test-signed.apk)
 
-Alpha.2 includes the first performance and stability phase: foreground runtime
-protection, a first-boot phone power-management guide, a permanent draggable
-hedgehog control, terminal-focused XFCE defaults, and portrait-safe window
-placement. The remaining optimization phases are recorded in
-[`docs/PERFORMANCE-STABILITY-ROADMAP.md`](docs/PERFORMANCE-STABILITY-ROADMAP.md).
+HedgeyOS is currently an alpha prerelease. The downloadable APK is test-signed
+for evaluation and is not yet a Play Store or production-signed release.
 
-Alpha.3 makes Direct touch the default pointer mode, places the soft-keyboard
-button in the always-visible extra-key row, and closes the hedgehog control
-window before opening Android's soft keyboard.
+## Your Linux Desktop, Anywhere
 
-Alpha.4 doubles the draggable hedgehog control to `96dp`, replaces the
-space-heavy XFCE Applications label with a hedgehog-only button, and enables
-single-click desktop launchers for touch use.
+- **One app, complete desktop.** Debian, PRoot, Termux:X11, XFCE, and the
+  HedgeyOS interface ship together. A separate Termux, Termux:X11, VNC, or
+  companion app is not required.
+- **Real Debian tools.** Use ordinary Trixie APT sources, install packages, run
+  Git, Python, compilers, editors, and other ARM64 Linux software.
+- **Built for touch.** Direct touch is the default, desktop launchers open with
+  one tap, primary apps open maximized, and portrait-safe window controls stay
+  reachable on narrow screens.
+- **Ready to stay running.** A foreground runtime, partial wake lock, and
+  guided vendor power-management setup help Android keep the desktop alive.
+- **A friendly desktop.** HedgeyOS combines an easy-to-read XFCE theme with its
+  hedgehog controls, wallpaper, compact app menu, and terminal-focused layout.
+- **Recovery within reach.** The draggable hedgehog opens controls for the
+  terminal, runtime report, logs, desktop restart, background setup, and Debian
+  recovery.
 
-## What hedgeyos Is
+## What's New In Alpha.5
 
-hedgeyos is an experimental, independent Termux-derived Android app. The goal is
-a single APK that bundles a Debian 13 Trixie ARM64 rootfs, embeds Termux:X11, and
-can be selected as the Android Home app so XFCE appears as the phone home screen.
+Alpha.5 improves Linux application compatibility and removes accidental X11
+diagnostic overhead from everyday sessions.
 
-hedgeyos is not affiliated with, endorsed by, or released by the Termux project.
+- GTK symbolic icons, checkmarks, menu indicators, and SVG controls now use
+  Debian's standard `librsvg2-common` GDK-Pixbuf loader.
+- Existing HedgeyOS installations receive the GTK repair through a verified,
+  offline, retryable migration without replacing the Debian rootfs.
+- Normal X11 sessions no longer start permanent live Android logcat children.
+- A clearly warned **Start X11 Diagnostic Session** action provides detailed
+  logs for one desktop session, then returns to normal automatically.
+- The Linux Runtime Report now verifies the SVG loader, loader cache, real SVG
+  decoding, and current X11 session mode before XFCE starts.
+
+These fixes address two confirmed defects. They do not claim to eliminate
+every source of GUI overhead under PRoot, Android scheduling, software
+rendering, or memory pressure.
 
 ## Requirements
 
 - Android 8.0 or newer.
-- ARM64 device.
-- Sideloading enabled by the user.
-- Enough free storage for the APK, compressed rootfs, and extracted Debian tree.
-
-Published alpha.4 artifact details:
-
-- Test-signed APK size: 262,136,122 bytes.
-- Bundled Debian rootfs size: 221,639,012 bytes compressed.
-- Bundled PRoot payload size: 114,325 bytes compressed.
-- APK SHA-256:
-  `44865100049105dfd29dadce413ed45715685aa4c80c0dc68444793f09458321`.
-- Test signing certificate SHA-256:
-  `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`.
-
-The prerelease APK is test-signed for alpha testing. It is not a Play/App Store
-production-signed artifact.
+- An ARM64 phone or tablet.
+- Permission to install an APK from outside the Play Store.
+- At least 1.5 GB of free space for extraction, plus room for your Debian
+  packages and files.
 
 ## Install
 
-1. Download `hedgeyos-arm64-v8a-alpha.4-test-signed.apk` from the release above.
-2. Install it through Android sideloading.
-3. Open hedgeyos from the app icon.
-4. Use Android's Home app chooser when prompted, or tap `Choose Home App`.
-5. During first boot, hedgeyos verifies and extracts the bundled Debian rootfs,
-   starts embedded X11, then starts XFCE.
-6. In the scrollable Background setup mini-window, allow unrestricted battery
-   use and review the instructions for the phone's background and autostart
-   controls. The guide permits continuing with a warning when a vendor setting
-   cannot be changed programmatically.
+1. Download `hedgeyos-arm64-v8a-alpha.5-test-signed.apk` from the link above.
+2. Install the APK through Android's sideloading flow.
+3. Open HedgeyOS.
+4. Follow the scrollable Background setup guide and allow unrestricted battery
+   use where your device offers it.
+5. Wait while HedgeyOS verifies and extracts Debian on first launch.
+6. Choose HedgeyOS as the Android Home app when prompted if you want the Linux
+   desktop to become your launcher.
 
-hedgeyos is a single-APK desktop path. It bundles Debian, PRoot, and embedded
-X11; users do not need a separate Termux app, Termux:X11 APK, VNC app, or
-companion APK for the XFCE desktop.
+First boot takes longer because the bundled Debian filesystem is being
+verified and extracted. Later launches reuse the installed rootfs.
 
-## Screenshots And Demo
+## Desktop Controls
 
-The first image was captured from an attached ARM64 Android phone running
-`v0.1.0-alpha.2`. The animated demos below it were recorded with alpha.1.
-
-![hedgeyos alpha.2 themed XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.2/hedgeyos-alpha.2-fresh-desktop.png)
-
-![hedgeyos first launch reaching the XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-first-load.gif)
-
-![hedgeyos XFCE desktop on a phone](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-initial-load-final.png)
-
-![hedgeyos desktop demo with menu, Debian terminal, display controls, and landscape file manager](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-desktop-demo.gif)
-
-![hedgeyos landscape file manager on Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-landscape-desktop.png)
-
-This is full Debian 13 Trixie on the phone: XFCE, Thunar, xfce4-terminal, the
-Debian filesystem, and ordinary Debian APT sources run inside the bundled PRoot
-rootfs.
-
-The older demo capture shows a legacy `panix@localhost` prompt from the
-pre-rename test rootfs. The current downloadable APK contains only the
-`hedgeyos` Debian account and opens terminals as `root@localhost`.
-
-## Background Protection
-
-While the desktop is intentionally running, hedgeyos owns an Android foreground
-service and partial wake lock. The runtime notification remains visible, and a
-completed setup guide can always be reopened from the hedgehog control.
-
-The hedgehog is an activity-local control over the Linux desktop, not a
-system-wide overlay over other Android apps. It uses the transparent Hitomi
-companion artwork at `96dp`, can be dragged, remembers a normalized position,
-and stays visible and on-screen after display rotation.
-
-## Desktop And Controls
-
-XFCE remains the desktop environment and retains its panel. The default desktop
-shows one hedgeyos Terminal launcher; built-in Home, Filesystem, Trash, and
-removable-volume icons are hidden without deleting user-created desktop files.
-Desktop launchers open with one click, and the panel's Applications button uses
-the transparent hedgehog icon without a text label.
-
-Primary terminal and file-manager windows open maximized. Window controls are
-ordered on the left as Close, Maximize, Minimize, and app icon, while the title
-remains centered. Other oversized windows receive a narrower portrait-safe
-initial size and remain user-resizable.
-
-The draggable hedgehog opens a compact, scrollable control mini-window with:
+The always-visible, draggable hedgehog opens a compact control window with:
 
 - Background survival setup.
 - Open Debian Terminal.
 - Run Debian APT Check.
-- Open hedgeyos logs.
+- Linux Runtime Report.
+- Open HedgeyOS logs.
 - Restart Desktop.
+- Start X11 Diagnostic Session.
 - Stop Desktop.
 - Reset Debian.
-- Toggle Soft Keyboard.
-- Open Android Apps.
-- Open Android Settings.
-- Display Settings.
-- Choose Home App.
+- Android keyboard, apps, settings, display, and Home-app controls.
 
-These controls are present so a broken launcher build does not trap the user.
+The hedgehog remains on-screen through rotation and remembers its position.
+The extra-key bar keeps common terminal keys and the Android keyboard button
+within thumb reach.
 
-## Debian And APT
+## Screenshots
 
-The bundled rootfs is Debian 13 Trixie with ordinary Debian APT sources for
-Trixie, Trixie updates, and Debian security. Normal commands such as `apt
-update`, `apt install git`, `python3`, and `gcc` are intended to work inside the
-Debian environment. The current alpha can run the Debian acceptance check from
-the hedgeyos menu. On the attached ARM64 phone, that check completed `apt update`,
-installed `hello`, ran it, and verified the installed dpkg record.
+![HedgeyOS themed XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.2/hedgeyos-alpha.2-fresh-desktop.png)
 
-The rootfs runs under unprivileged PRoot, not Android root, a VM, or a container
-with its own kernel. Debian processes use PRoot's fake-root identity so package
-management works inside the rootfs without granting privileges over Android.
-PRoot still has compatibility limits around kernel features, daemons, and
-filesystem semantics.
+![HedgeyOS first launch](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-first-load.gif)
 
-All Debian launch paths share host-backed ephemeral `/tmp`, `/run`, and
-`/dev/shm` facilities. Before XFCE starts, hedgeyos verifies directory modes,
-POSIX shared memory, the X11 socket, session D-Bus, and visible Android kernel
-interfaces. The resulting Linux Runtime Report is available from the hedgehog
-controls. This is a generic Linux compatibility layer; installed applications
-do not receive Chromium-specific wrappers or sandbox-disabling flags.
+![HedgeyOS desktop demo](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-desktop-demo.gif)
 
-## Build
+Older alpha.1 captures show the pre-rename `panix@localhost` prompt. Current
+builds use HedgeyOS branding and open Debian desktop terminals through PRoot
+fake-root as `root@localhost`.
+
+## Debian And Your Files
+
+HedgeyOS runs Debian 13 Trixie under unprivileged PRoot. Debian's fake-root
+identity lets APT manage packages inside the guest without granting root access
+to Android itself. Files exported by HedgeyOS appear in the Debian user's
+Downloads and Logs directories.
+
+This is a compatibility layer, not a virtual machine with its own kernel.
+Software that requires privileged kernel features, a full system D-Bus, or
+hardware-specific acceleration may need adaptation or may not work.
+
+HedgeyOS is an independent Termux-derived project. It is not affiliated with,
+endorsed by, or released by the Termux project.
+
+## Technical Details
+
+### Release Status And Integrity
+
+`v0.1.0-alpha.5` is an ARM64 test build:
+
+- APK size: 267,281,395 bytes.
+- APK SHA-256:
+  `76eb866c89e5efcbf7d65e2f312fa237b5db2d50c08c8b307cf872bcd627a298`.
+- Test signing certificate SHA-256:
+  `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`.
+- Bundled rootfs size: 223,940,166 bytes.
+- Bundled rootfs SHA-256:
+  `c9858719da4ddc64e3aa74a55b21acff9eb1cf80ce6a8a9562570a3d4162dbbc`.
+- Package name: `org.hedgeyos`.
+- Minimum Android API: 26.
+
+The final production-signed `v0.1.0` has not been declared. Subjective Geany
+and Chromium responsiveness testing, broader device coverage, and production
+signing remain release work. Objective build and device evidence is recorded
+in [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md).
+
+### Runtime Architecture
+
+The APK embeds Termux:X11 and an ARM64 Debian rootfs. Android starts the X11
+server, then launches Debian through a common PRoot command builder with
+host-backed `/tmp`, `/run`, and `/dev/shm`. XFCE runs under a private session
+D-Bus. Runtime preflight verifies shared memory, X11, D-Bus, GTK SVG support,
+and other packaged desktop contracts before startup.
+
+Existing-rootfs repairs are versioned in
+`rootfs/runtime-assets/hedgeyos-linux/migration-packages.tsv`. Every bundled
+package is matched by name, version, architecture, filename, and SHA-256.
+Migration markers are written only after package configuration and capability
+checks pass.
+
+### Build
 
 ```sh
 ./scripts/build-hedgeyos.sh
 ```
 
-See [`docs/BUILDING.md`](docs/BUILDING.md) for current toolchain requirements.
+See [`docs/BUILDING.md`](docs/BUILDING.md) for the Android toolchain and
+[`docs/DEBIAN-REBUILD.md`](docs/DEBIAN-REBUILD.md) for reproducible rootfs
+construction, package migration closure, ownership checks, and GTK asset
+verification.
 
-## Documentation
+### Maintainer And Agent Documentation
 
 - [`AGENTS.md`](AGENTS.md)
 - [`UPSTREAMS.md`](UPSTREAMS.md)
@@ -187,7 +183,8 @@ See [`docs/BUILDING.md`](docs/BUILDING.md) for current toolchain requirements.
 - [`docs/ROOTFS-CUSTOMIZATIONS.md`](docs/ROOTFS-CUSTOMIZATIONS.md)
 - [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md)
 
-## License
+### License
 
-hedgeyos is GPL-compatible and retains upstream Termux and Termux:X11 notices.
-Complete corresponding source must be available for every release APK.
+HedgeyOS is GPL-compatible and retains the required upstream Termux and
+Termux:X11 notices. Complete corresponding source must remain available for
+every distributed APK.

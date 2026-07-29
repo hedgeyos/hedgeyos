@@ -97,4 +97,15 @@ public class HedgeyosProcessOwnerTest {
             "--pid",
             "7654"));
     }
+
+    @Test
+    public void rendererDiagnosticChildMatchesRecordedAppParent() {
+        Assert.assertTrue(HedgeyosProcessOwner.matchesOwnedChild(
+            STATUS,
+            Arrays.asList("logcat", "--pid=7654"),
+            10234,
+            7654,
+            "logcat",
+            "--pid=7654"));
+    }
 }

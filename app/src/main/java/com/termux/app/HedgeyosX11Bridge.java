@@ -38,6 +38,7 @@ final class HedgeyosX11Bridge {
 
     static void startServer(Context context, File tmpDir, File logFile, File pidFile,
                             File diagnosticPidFile,
+                            File activityDiagnosticPidFile,
                             HedgeyosX11DiagnosticState.SessionMode requestedMode) throws Exception {
         if (!isAvailable(context)) {
             throw new IOException("Embedded Termux:X11 module is not packaged in this build.");
@@ -57,7 +58,12 @@ final class HedgeyosX11Bridge {
 
         mkdirs(tmpDir);
         mkdirs(logFile.getParentFile());
-        stopDiagnosticLogcat(context, diagnosticPidFile, pidFile, logFile);
+        stopDiagnosticLogcat(
+            context,
+            diagnosticPidFile,
+            activityDiagnosticPidFile,
+            pidFile,
+            logFile);
         List<Integer> stale = HedgeyosProcessOwner.stopRecordedAndMatching(pidFile, "hedgeyos-x11");
         if (!stale.isEmpty()) {
             appendLog(context, logFile, "Stopped owned stale X11 processes: " + stale);
@@ -91,6 +97,7 @@ final class HedgeyosX11Bridge {
         } else {
             builder.environment().remove("HEDGEYOS_X11_DIAGNOSTIC_PID_FILE");
             HedgeyosProcessOwner.clear(diagnosticPidFile);
+            HedgeyosProcessOwner.clear(activityDiagnosticPidFile);
         }
         File xkbConfigRoot = new File(context.getFilesDir(), "debian/usr/share/X11/xkb");
         if (xkbConfigRoot.isDirectory()) {
@@ -135,8 +142,14 @@ final class HedgeyosX11Bridge {
         }
     }
 
-    static void stopServer(Context context, File pidFile, File diagnosticPidFile, File logFile) {
-        stopDiagnosticLogcat(context, diagnosticPidFile, pidFile, logFile);
+    static void stopServer(Context context, File pidFile, File diagnosticPidFile,
+                           File activityDiagnosticPidFile, File logFile) {
+        stopDiagnosticLogcat(
+            context,
+            diagnosticPidFile,
+            activityDiagnosticPidFile,
+            pidFile,
+            logFile);
         Process processToStop = null;
         synchronized (LOCK) {
             if (sX11Process != null) {
@@ -160,6 +173,7 @@ final class HedgeyosX11Bridge {
             appendLog(context, logFile, "Stopped owned X11 processes: " + stopped);
         }
         HedgeyosProcessOwner.clear(diagnosticPidFile);
+        HedgeyosProcessOwner.clear(activityDiagnosticPidFile);
     }
 
     static boolean configureDebugEnvironment(Map<String, String> environment,
@@ -182,11 +196,24 @@ final class HedgeyosX11Bridge {
     }
 
     private static void stopDiagnosticLogcat(Context context, File diagnosticPidFile,
+                                             File activityDiagnosticPidFile,
                                              File x11PidFile, File logFile) {
         if (HedgeyosProcessOwner.stopRecordedOwnedChild(diagnosticPidFile, x11PidFile)) {
             appendLog(context, logFile, "Stopped recorded owned X11 diagnostic logcat child.");
         }
+        int appPid = android.os.Process.myPid();
+        if (HedgeyosProcessOwner.stopRecordedOwnedChild(
+            activityDiagnosticPidFile,
+            appPid,
+            "logcat",
+            "--pid=" + appPid)) {
+            appendLog(
+                context,
+                logFile,
+                "Stopped recorded owned X11 renderer diagnostic logcat child.");
+        }
         HedgeyosProcessOwner.clear(diagnosticPidFile);
+        HedgeyosProcessOwner.clear(activityDiagnosticPidFile);
     }
 
     private static void appendLog(File file, String text) {

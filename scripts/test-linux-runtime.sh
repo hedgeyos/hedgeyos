@@ -10,6 +10,8 @@ ATOMIC_FILE="$REPO_ROOT/app/src/main/java/com/termux/app/HedgeyosAtomicFile.java
 PROCESS_OWNER="$REPO_ROOT/app/src/main/java/com/termux/app/HedgeyosProcessOwner.java"
 X11_BRIDGE="$REPO_ROOT/app/src/main/java/com/termux/app/HedgeyosX11Bridge.java"
 X11_NATIVE="$REPO_ROOT/third_party/termux-x11/lorie/src/main/cpp/lorie/cmdentrypoint.c"
+X11_ACTIVITY_NATIVE="$REPO_ROOT/third_party/termux-x11/lorie/src/main/cpp/lorie/activity.c"
+X11_ACTIVITY="$REPO_ROOT/third_party/termux-x11/lorie/src/main/java/com/termux/x11/MainActivity.java"
 APP_BUILD="$REPO_ROOT/app/build.gradle"
 
 sh -n "$ASSET_DIR/hedgeyos-runtime-preflight"
@@ -63,6 +65,9 @@ grep -Fq 'HEDGEYOS_X11_DIAGNOSTIC_PID_FILE' "$X11_BRIDGE"
 grep -Fq 'recordDiagnosticChild' "$X11_NATIVE"
 grep -Fq 'startDiagnosticChildReaper' "$X11_NATIVE"
 grep -Fq 'stopRecordedOwnedChild' "$X11_BRIDGE"
+grep -Fq 'x11-activity-diagnostic-logcat.pid' "$X11_ACTIVITY"
+grep -Fq 'startLogcatChildReaper' "$X11_ACTIVITY_NATIVE"
+grep -Fq 'PR_SET_PDEATHSIG' "$X11_ACTIVITY_NATIVE"
 
 normalize_display() {
     display_number=$1

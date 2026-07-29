@@ -201,6 +201,7 @@ public final class HedgeyosRuntimeManager {
             appContext,
             x11PidFile(appContext),
             x11DiagnosticPidFile(appContext),
+            x11ActivityDiagnosticPidFile(appContext),
             desktopLog);
         setState(appContext, isRootfsInstalled(appContext) ? STATE_READY : STATE_NOT_INSTALLED, "hedgeyos desktop is stopped.");
     }
@@ -355,6 +356,7 @@ public final class HedgeyosRuntimeManager {
             context,
             x11PidFile(context),
             x11DiagnosticPidFile(context),
+            x11ActivityDiagnosticPidFile(context),
             desktopLog);
         HedgeyosGuestRuntime.Layout runtime = guestRuntime(context);
         HedgeyosGuestRuntime.prepare(runtime, rootfsDir(context), true);
@@ -367,6 +369,7 @@ public final class HedgeyosRuntimeManager {
             desktopLog,
             x11PidFile(context),
             x11DiagnosticPidFile(context),
+            x11ActivityDiagnosticPidFile(context),
             x11SessionMode);
 
         try {
@@ -412,6 +415,7 @@ public final class HedgeyosRuntimeManager {
                 context,
                 x11PidFile(context),
                 x11DiagnosticPidFile(context),
+                x11ActivityDiagnosticPidFile(context),
                 desktopLog);
             throw e;
         }
@@ -1199,6 +1203,12 @@ public final class HedgeyosRuntimeManager {
 
     private static File x11DiagnosticPidFile(Context context) {
         return new File(guestRuntime(context).processes, "x11-diagnostic-logcat.pid");
+    }
+
+    private static File x11ActivityDiagnosticPidFile(Context context) {
+        return new File(
+            guestRuntime(context).processes,
+            "x11-activity-diagnostic-logcat.pid");
     }
 
     private static File prootBinary(Context context) {

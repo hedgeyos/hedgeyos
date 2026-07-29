@@ -67,6 +67,10 @@ import com.termux.x11.utils.KeyInterceptor;
 import com.termux.x11.utils.TermuxX11ExtraKeys;
 import com.termux.x11.utils.X11ToolbarViewPager;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @SuppressLint("ApplySharedPref")
@@ -518,8 +522,10 @@ public class MainActivity extends AppCompatActivity {
             if (service != null && service.asBinder().isBinderAlive()) {
                 Log.v("LorieBroadcastReceiver", "Extracting logcat fd.");
                 ParcelFileDescriptor logcatOutput = service.getLogcatOutput();
-                if (logcatOutput != null)
-                    LorieView.startLogcat(logcatOutput.detachFd());
+                if (logcatOutput != null) {
+                    int logcatPid = LorieView.startLogcat(logcatOutput.detachFd());
+                    recordDiagnosticLogcatPid(logcatPid);
+                }
 
                 tryConnect();
 
@@ -528,6 +534,25 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             Log.e("MainActivity", "Something went wrong while we were establishing connection", e);
+        }
+    }
+
+    private void recordDiagnosticLogcatPid(int pid) {
+        if (pid <= 0)
+            return;
+
+        File pidFile = new File(
+            getFilesDir(),
+            "linux-runtime/processes/x11-activity-diagnostic-logcat.pid");
+        File parent = pidFile.getParentFile();
+        if (parent == null || (!parent.isDirectory() && !parent.mkdirs())) {
+            Log.e("MainActivity", "Could not create the X11 diagnostic PID directory.");
+            return;
+        }
+        try (FileOutputStream output = new FileOutputStream(pidFile, false)) {
+            output.write((pid + "\n").getBytes(StandardCharsets.US_ASCII));
+        } catch (IOException e) {
+            Log.e("MainActivity", "Could not record the X11 renderer diagnostic PID.", e);
         }
     }
 

@@ -61,15 +61,24 @@ final class HedgeyosProcessOwner {
     }
 
     static boolean stopRecordedOwnedChild(File childPidFile, File parentPidFile) {
-        int childPid = readPid(childPidFile);
         int parentPid = readPid(parentPidFile);
+        if (parentPid <= 0) {
+            clear(childPidFile);
+            return false;
+        }
+        return stopRecordedOwnedChild(
+            childPidFile,
+            parentPid,
+            "logcat",
+            "--pid",
+            Integer.toString(parentPid));
+    }
+
+    static boolean stopRecordedOwnedChild(File childPidFile, int parentPid,
+                                          String... requiredCommandArguments) {
+        int childPid = readPid(childPidFile);
         boolean stopped = childPid > 0 && parentPid > 0 &&
-            stopIfOwnedChild(
-                childPid,
-                parentPid,
-                "logcat",
-                "--pid",
-                Integer.toString(parentPid));
+            stopIfOwnedChild(childPid, parentPid, requiredCommandArguments);
         clear(childPidFile);
         return stopped;
     }

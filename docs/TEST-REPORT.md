@@ -287,9 +287,9 @@ target and skipped the link, leaving the parent nonempty. Runtime cleanup now
 uses `Files.exists(..., NOFOLLOW_LINKS)`, and a regression test creates and
 removes the same broken-link shape.
 
-Visual GTK and process-liveness Qt evidence passed. Chromium's flag-free
-normal-user launch and the final restart/force-stop acceptance steps remain
-pending before alpha.5 publication.
+Visual GTK and process-liveness Qt evidence passed. The restart and Android
+force-stop/relaunch checks now pass below. Chromium's extended responsiveness
+check remains pending human testing.
 
 ## Accidental Permanent X11 Debug Mode Postmortem
 
@@ -311,21 +311,34 @@ existing appended desktop/X11 stdout and stderr log. The build-time
 The launcher action `Start X11 Diagnostic Session` shows a performance warning
 and requests diagnostic mode in memory for one desktop session. The request is
 consumed before launch and cleared after use, so a crash or Android force-stop
-cannot persist it. Diagnostic logcat cleanup validates the recorded child PID,
-parent X11 PID, app UID, and exact `logcat --pid <x11-pid>` arguments before
-stopping it; no process-name-wide cleanup is used. Native waiters reap the
-diagnostic children.
+cannot persist it. Diagnostic logcat cleanup validates both upstream children
+using their recorded child PIDs, X11 or app parent PID, app UID, and exact
+`logcat --pid <x11-pid>` or `logcat --pid=<app-pid>` arguments before stopping
+them; no process-name-wide cleanup is used. Native waiters reap the diagnostic
+children.
 
 Regression tests cover normal-variable removal, explicit diagnostic builds,
 one-shot consumption, a later normal session, recorded child ownership, and
 the existing X11 ownership/runtime contracts. The full X11-enabled release
 assembly passed with `HEDGEYOS_X11_DEBUG=0`.
 
-ADB update-install, boot, normal-session process evidence, restart, relaunch,
-and light terminal smoke results will be recorded below after device
-verification. Extended Geany and Chromium responsiveness remains
-`PENDING_HUMAN_TEST`. Removing the accidental logging is a confirmed fix, not
-proof that every GUI-performance issue is resolved.
+The final APK update-installed successfully. A normal session contained
+`org.hedgeyos`, `hedgeyos-x11`, PRoot, `xfce4-session`, `xfwm4`,
+`xfce4-panel`, and `xfdesktop`, with no `logcat --pid` child or defunct logcat
+entry. Restart Desktop produced new X11/XFCE PIDs, and Android force-stop
+removed the app and all guest processes before relaunch returned to
+`summary=PASS fatal=0`.
+
+The real menu action also passed on device. Its warning explicitly states the
+performance cost and one-session lifetime. The diagnostic session reported
+`ON`, produced both upstream scoped logcat children, and recorded their exact
+PIDs. A subsequent normal Restart Desktop logged safe cleanup of both recorded
+children, started a new X11 process, reported diagnostic mode `OFF`, and had no
+remaining diagnostic or defunct logcat process.
+
+Extended Geany and Chromium responsiveness remains `PENDING_HUMAN_TEST`.
+Removing the accidental logging is a confirmed fix, not proof that every
+GUI-performance issue is resolved.
 
 ## Missing GTK SVG Loader Postmortem
 
@@ -359,9 +372,64 @@ The final rootfs contains both packages, the architecture-specific SVG loader,
 an SVG loader-cache entry, and a successful GTK asset smoke record in
 provenance.
 
-ADB migration/package/runtime evidence and the booted-desktop and terminal
-screenshots will be recorded below after device verification. Extended GTK
+The first update migration correctly exposed a PRoot-only issue in the smoke
+helper: Python `ctypes.util.find_library()` returned no GDK-Pixbuf result even
+though the package and library were installed. Migration stopped before its
+marker or XFCE startup. The helper now loads the concrete Debian multiarch
+libraries under `/usr/lib/<multiarch>` and has a regression contract forbidding
+the nonportable lookup. On relaunch, `window-policy-v1` was skipped as already
+complete, `gtk-svg-loader-v1` retried, all decode checks passed, and only then
+was its marker written. This supplies direct interrupted-migration retry
+evidence.
+
+ADB guest evidence confirms:
+
+- `librsvg2-common:arm64 2.60.0+dfsg-1` is installed.
+- `librsvg2-2:arm64 2.60.0+dfsg-1` is installed.
+- `libpixbufloader_svg.so` exists under the ARM64 multiarch path.
+- The active loader cache contains SVG.
+- Deterministic SVG, Adwaita symbolic SVG, check-indicator SVG, and PNG decode.
+- Both generation-specific migration markers exist.
+- Existing home entries, Geany, Chromium, Devilspie2, and the previously
+  installed `hello` package remain present.
+- `Reset Debian` was not used.
+
+The runtime report shows GTK SVG loader, cache, and decode `PASS`. Extended GTK
 visual inspection and subjective responsiveness remain `PENDING_HUMAN_TEST`.
+
+## Alpha.5 Device Verification
+
+Objective Codex checks ran on serial `ab6b77a8`, model `CPH2499`, fingerprint
+`OPPO/CPH2499/OP56BBL1:16/BP2A.250605.015/T.R4T3.3f6fde2-1ac0734-1ac49a3:user/release-keys`.
+
+The final test-signed APK was update-installed with
+`adb install --no-incremental -r`. The existing rootfs migration completed
+without clearing app data, and the exact final APK was installed once more
+after the clean rootfs rebuild. HedgeyOS reached the themed XFCE desktop, its
+panel and dock were present, one-tap Terminal launch opened a maximized
+terminal, and the short guest command set recorded package, marker, loader,
+decode, preserved-home, preserved-application, and runtime results.
+
+Evidence is under
+`build/device-evidence/gtk-svg-x11-debug-20260730-044827/`. Primary captures:
+
+- `booted-desktop-final.png`
+- `open-terminal-final.png`
+- `terminal-smoke.png`
+- `device-smoke.txt`
+- `linux-migration.log`
+- `linux-runtime-report-final-installed.txt`
+- `processes-final-installed-normal.txt`
+- `processes-final-diagnostic.txt`
+- `processes-final-normal-after-diagnostic.txt`
+
+APK SHA-256:
+`76eb866c89e5efcbf7d65e2f312fa237b5db2d50c08c8b307cf872bcd627a298`.
+Clean rootfs SHA-256:
+`c9858719da4ddc64e3aa74a55b21acff9eb1cf80ce6a8a9562570a3d4162dbbc`.
+
+No subjective responsiveness result is inferred from successful boot,
+screenshots, process liveness, or ADB access.
 
 ## Automated Verification
 
@@ -369,6 +437,8 @@ Passed:
 
 - `:app:testReleaseUnitTest`
 - Full X11-enabled release assembly
+- `apksigner` v2/v3 verification
+- `scripts/inspect-hedgeyos-apk.sh`
 - `scripts/inspect-hedgeyos-rootfs.sh`
 - `scripts/test-linux-defaults.sh`
 - `scripts/test-linux-runtime.sh`
@@ -390,6 +460,6 @@ refresh path.
 
 ## Release Decision
 
-`v0.1.0-alpha.4` is suitable as a public prerelease/test APK. Final `v0.1.0`
-still requires production signing, direct in-app Reset Debian evidence,
-physical-keyboard testing, and broader device coverage.
+`v0.1.0-alpha.5` is suitable as a test-signed public prerelease APK. Final
+`v0.1.0` still requires production signing, extended Geany and Chromium
+responsiveness testing, physical-keyboard testing, and broader device coverage.
