@@ -1,15 +1,15 @@
 # Known Issues
 
-- `v0.1.0-alpha.1` is a published, test-signed prerelease. It is not the final
+- `v0.1.0-alpha.2` is a published, test-signed prerelease. It is not the final
   `v0.1.0` production release.
 - The alpha boot/restart gate passes on the attached ARM64 phone: hedgeyos
   installs, starts embedded X11, reaches XFCE with the panel/dock and `xfwm4`
   running, applies the hedgeyos wallpaper, and recovers after app
   force-stop/relaunch.
-- Remaining final-release evidence gaps are narrower than the earlier
-  black-screen/X-cursor failure: direct in-app Reset Debian evidence, APT package
-  install proof on the exact final artifact, clean-profile/device proof, and
-  production signing still need a deliberate pass before final `v0.1.0`.
+- Remaining final-release evidence gaps are direct in-app Reset Debian,
+  physical-keyboard behavior, broader device coverage, and production signing.
+  Alpha.2 has exact-artifact proof for true clean first boot, APT package
+  installation, background protection, and process recovery.
 - Termux must not be removed from the test phone. hedgeyos independence should
   be proven from APK contents, code paths, packages, and processes. Current
   evidence shows hedgeyos uses its own package, bundled PRoot/rootfs, and

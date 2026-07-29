@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=hedgeyos portrait window rules
+Comment=Apply portrait-safe defaults to newly opened XFCE windows
+Exec=devilspie2 --folder /etc/hedgeyos/devilspie2
+OnlyShowIn=XFCE;
+Terminal=false
+StartupNotify=false
+NoDisplay=true

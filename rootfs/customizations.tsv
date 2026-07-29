@@ -1,0 +1,12 @@
+# source	target	owner	mode	policy
+hedgeyos-linux/hedgeyos-apply-defaults	/usr/local/libexec/hedgeyos-apply-defaults	0:0	0755	replace-system
+hedgeyos-linux/hedgeyos-window-rules.desktop	/etc/xdg/autostart/hedgeyos-window-rules.desktop	0:0	0644	replace-system
+hedgeyos-linux/hedgeyos-window-rules.lua	/etc/hedgeyos/devilspie2/hedgeyos-window-rules.lua	0:0	0644	replace-system
+hedgeyos-linux/xfce4-desktop.xml	/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml	0:0	0644	seed-home
+hedgeyos-linux/xfwm4.xml	/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml	0:0	0644	seed-home
+hedgeyos-linux/xsettings.xml	/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml	0:0	0644	seed-home
+hedgeyos-linux/xfce4-session.xml	/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml	0:0	0644	seed-home
+hedgeyos-linux/terminalrc	/etc/skel/.config/xfce4/terminal/terminalrc	0:0	0644	seed-home
+hedgeyos-linux/terminalrc	/usr/share/hedgeyos/defaults/terminalrc	0:0	0644	replace-system
+hedgeyos-linux/Terminal.desktop	/etc/skel/Desktop/Terminal.desktop	0:0	0755	seed-home
+hedgeyos-linux/Terminal.desktop	/usr/share/hedgeyos/defaults/Terminal.desktop	0:0	0644	replace-system

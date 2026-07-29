@@ -1,0 +1,7 @@
+[Configuration]
+FontName=DejaVu Sans Mono 12
+MiscDefaultGeometry=72x22
+ColorForeground=#2f251a
+ColorBackground=#fff6dd
+ColorCursor=#8f5f2a
+ColorPalette=#2f251a;#8f3f2a;#3f6f45;#b77a24;#355a7c;#805a9b;#35706c;#fff6dd;#6f604f;#b75a3b;#5e8b59;#d59635;#51799e;#9b74ad;#55918b;#fffaf0

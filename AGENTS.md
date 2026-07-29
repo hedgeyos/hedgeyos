@@ -34,14 +34,14 @@ Surface.
 
 - Repository: `https://github.com/hedgeyos/hedgeyos`
 - Branch: `master`
-- Current Android version: `versionCode 1`, `versionName 0.1.0-alpha.1`
+- Current Android version: `versionCode 2`, `versionName 0.1.0-alpha.2`
 - Published prerelease:
-  `https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.1`
+  `https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.2`
 - Published APK:
-  `hedgeyos-arm64-v8a-alpha.1-test-signed.apk`
+  `hedgeyos-arm64-v8a-alpha.2-test-signed.apk`
 - Published APK SHA-256:
-  `464bb857c8bcf410953535caddde2d82d985f5281c17d65031eca1881adfc91a`
-- Release code commit before documentation cleanup: `2f271ab4`
+  `50384775976d9f1475634b01d440732d677157b6471e3e1231f2ee27ae856ccd`
+- Release source: tag `v0.1.0-alpha.2`
 
 The latest local APK inspection records:
 
@@ -79,7 +79,7 @@ the architecture:
   rebuildable.
 - `aapt dump badging` lists disabled launcher candidates. The CI inspection
   script now validates the relevant manifest activity blocks directly.
-- `v0.1.0-alpha.1` currently uses `versionCode 1`. Future prereleases must bump
+- `v0.1.0-alpha.2` currently uses `versionCode 2`. Future prereleases must bump
   `versionCode` before they can update this APK in place.
 - Command-line `pm install` from Termux on the phone hit Android app-UID/FUSE
   restrictions. That is not evidence that normal Android UI install fails.

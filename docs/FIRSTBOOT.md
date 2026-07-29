@@ -22,6 +22,21 @@ Target states:
 and `HedgeyosRuntimeService` runs the state machine from a foreground service. The
 Home activity starts the service, polls status, and exposes recovery controls.
 
+Before the user dismisses first-boot onboarding, a scrollable Background setup
+mini-window:
+
+- requests Android's battery-optimization exemption;
+- reports notification and background-restriction status;
+- links to app, notification, battery, and known vendor autostart settings;
+- gives manufacturer-specific manual instructions; and
+- permits continuing with a reliability warning when Android cannot change a
+  vendor setting directly.
+
+The guide remains available from the permanent hedgehog control. While the
+desktop is intentionally running, the foreground runtime service owns a partial
+wake lock. Explicit Stop and Reset release it, and a requested running state is
+restored after Android boot.
+
 Implemented and device-proven behavior on 2026-07-26:
 
 - Installs the embedded Termux bootstrap into hedgeyos's private `files/usr` path
@@ -45,10 +60,14 @@ Implemented and device-proven behavior on 2026-07-26:
   `XKB_CONFIG_ROOT` at the bundled Debian XKB directory.
 - Starts the XFCE supervisor through bundled PRoot with `PROOT_LOADER`,
   `PROOT_TMP_DIR`, and `LD_LIBRARY_PATH` pointed at the hedgeyos private prefix.
-- Defaults the phone display to scaled mode, `displayScale=200`, fullscreen, and
+- Defaults the phone display to scaled mode, `displayScale=240`, fullscreen, and
   visible extra-key bar.
 
-The current local test build reached `RUNNING` on the attached CPH2499 phone.
+The test-signed `v0.1.0-alpha.2` artifact reached `RUNNING` from a true
+uninstall/reinstall on the attached CPH2499 phone. The onboarding mini-window
+appeared automatically, the bundled rootfs reached the complete themed XFCE
+session, and the built-in acceptance check completed `apt update`, installed
+and ran `hello`, and verified its dpkg record.
 Evidence is recorded in `docs/TEST-REPORT.md` and
 `docs/images/hedgeyos-scaled-firstboot-xfce.png`.
 
@@ -61,5 +80,4 @@ after verification and health checks pass.
 Remaining first-boot/recovery evidence needed before final `v0.1.0`:
 
 - In-app Reset Debian.
-- True clean first boot of the exact final artifact.
 - Physical keyboard behavior.

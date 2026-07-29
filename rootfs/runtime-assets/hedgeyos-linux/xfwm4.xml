@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="theme" type="string" value="Default"/>
+    <property name="title_font" type="string" value="DejaVu Sans Bold 12"/>
+    <property name="button_layout" type="string" value="CMHO|"/>
+    <property name="title_alignment" type="string" value="center"/>
+    <property name="placement_mode" type="string" value="center"/>
+    <property name="use_compositing" type="bool" value="false"/>
+  </property>
+</channel>

@@ -10,10 +10,11 @@ ROOTFS_OUT="$OUT_DIR/$ROOTFS_NAME"
 ROOTFS_TREE="$OUT_DIR/debian-trixie-arm64-rootfs"
 ROOTFS_TAR="$OUT_DIR/debian-trixie-arm64-rootfs.tar"
 ROOTFS_TMP="$ROOTFS_OUT.tmp"
+MIGRATION_ASSET_DIR="$REPO_ROOT/app/src/main/assets/hedgeyos-linux/packages"
 APT_SNAPSHOT="${APT_SNAPSHOT:-}"
 DEBIAN_KEYRING="${DEBIAN_KEYRING:-/usr/share/keyrings/debian-archive-keyring.gpg}"
 
-PACKAGES="bash,coreutils,apt,ca-certificates,sudo,curl,wget,git,nano,less,procps,psmisc,iproute2,python3,build-essential,dbus,dbus-x11,xfce4,xfce4-terminal,thunar,xterm,fonts-dejavu,adwaita-icon-theme"
+PACKAGES="bash,coreutils,apt,ca-certificates,sudo,curl,wget,git,nano,less,procps,psmisc,iproute2,python3,build-essential,dbus,dbus-x11,xfce4,xfce4-terminal,thunar,xterm,devilspie2,fonts-dejavu,adwaita-icon-theme"
 
 command -v mmdebstrap >/dev/null 2>&1 || {
     echo "mmdebstrap is required to build the Debian rootfs." >&2
@@ -82,6 +83,7 @@ else
         "$PRIMARY_SOURCE"
 fi
 
+"$SCRIPT_DIR/verify-migration-packages.sh" "$ROOTFS_TREE" "$MIGRATION_ASSET_DIR"
 "$SCRIPT_DIR/configure-rootfs.sh" "$ROOTFS_TREE"
 mkdir -p "$ROOTFS_TREE/dev" "$ROOTFS_TREE/proc" "$ROOTFS_TREE/sys"
 
@@ -125,6 +127,7 @@ updates_source=$UPDATES_SOURCE
 security_source=$SECURITY_SOURCE
 debian_keyring_sha256=$DEBIAN_KEYRING_SHA256
 packages=$PACKAGES
+migration_packages=$(find "$MIGRATION_ASSET_DIR" -maxdepth 1 -type f -name '*.deb' -printf '%f ' | sort)
 android_extractable=true
 archive_excludes=./dev/*
 archive_hardlinks=dereferenced

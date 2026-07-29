@@ -55,6 +55,13 @@ jobs:
           cp build/rootfs/debian-trixie-arm64-rootfs.tar.zst app/src/main/assets/
           cp rootfs/manifests/debian-trixie-arm64-rootfs.tar.zst.sha256 app/src/main/assets/
 
+      - name: Inspect Debian rootfs customizations
+        run: |
+          ./scripts/inspect-hedgeyos-rootfs.sh \
+            build/rootfs/debian-trixie-arm64-rootfs.tar.zst \
+            rootfs/manifests/debian-trixie-arm64-rootfs.provenance \
+            build/hedgeyos-rootfs-inspection
+
       - name: Build PRoot payload
         run: |
           ./scripts/build-proot-payload.sh
@@ -100,6 +107,7 @@ jobs:
             app/build/outputs/apk/release/hedgeyos-arm64-v8a.apk
             app/build/outputs/apk/release/hedgeyos-arm64-v8a.apk.sha256
             rootfs/manifests/**
+            build/hedgeyos-rootfs-inspection/**
             build/hedgeyos-logs/**
             build/hedgeyos-inspection/**
           if-no-files-found: error

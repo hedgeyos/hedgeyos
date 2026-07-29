@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Terminal
+Comment=Open the hedgeyos Debian terminal
+Exec=xfce4-terminal --maximize
+Icon=/usr/share/hedgeyos/hedgeyos-icon.png
+Terminal=false
+Categories=System;TerminalEmulator;

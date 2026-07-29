@@ -1,7 +1,11 @@
 #!/usr/bin/env sh
 set -eu
 
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 ROOTFS="${1:-}"
+CUSTOMIZATION_MANIFEST="$SCRIPT_DIR/customizations.tsv"
+RUNTIME_ASSETS="$SCRIPT_DIR/runtime-assets"
+
 [ -n "$ROOTFS" ] || {
     echo "usage: rootfs/configure-rootfs.sh <rootfs-dir>" >&2
     exit 1
@@ -9,6 +13,11 @@ ROOTFS="${1:-}"
 
 [ -d "$ROOTFS" ] || {
     echo "rootfs directory does not exist: $ROOTFS" >&2
+    exit 1
+}
+
+[ -r "$CUSTOMIZATION_MANIFEST" ] || {
+    echo "customization manifest does not exist: $CUSTOMIZATION_MANIFEST" >&2
     exit 1
 }
 
@@ -31,6 +40,26 @@ chmod 0440 "$ROOTFS/etc/sudoers.d/hedgeyos"
 chmod 0440 "$ROOTFS/etc/sudoers"
 chmod 0644 "$ROOTFS/etc/sudo.conf"
 chmod 4755 "$ROOTFS/usr/bin/sudo"
+
+tab=$(printf '\t')
+while IFS="$tab" read -r source target owner mode policy; do
+    case "$source" in
+        ''|'#'*) continue ;;
+    esac
+
+    source_path="$RUNTIME_ASSETS/$source"
+    target_path="$ROOTFS$target"
+    [ -f "$source_path" ] || {
+        echo "customization source does not exist: $source_path" >&2
+        exit 1
+    }
+
+    owner_user=${owner%%:*}
+    owner_group=${owner##*:}
+    install -D -o "$owner_user" -g "$owner_group" -m "$mode" "$source_path" "$target_path"
+done < "$CUSTOMIZATION_MANIFEST"
+
+cp -a "$ROOTFS/etc/skel/." "$ROOTFS/home/hedgeyos/"
 
 rm -rf "$ROOTFS/var/cache/apt/archives"/*.deb \
        "$ROOTFS/var/lib/apt/lists"/* \

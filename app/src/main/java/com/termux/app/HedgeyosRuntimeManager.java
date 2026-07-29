@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
@@ -220,6 +221,7 @@ public final class HedgeyosRuntimeManager {
 
         if (isRootfsInstalled(context)) {
             ensureLinuxBranding(context, rootfsDir(context));
+            ensureLinuxWindowPolicy(context);
             setState(context, STATE_READY, "Debian rootfs is installed.");
             return;
         }
@@ -393,6 +395,10 @@ public final class HedgeyosRuntimeManager {
             "    sleep 1\n" +
             "  done\n" +
             "  sleep 7\n" +
+            "  if [ -x /usr/local/libexec/hedgeyos-apply-defaults ]; then\n" +
+            "    echo \"hedgeyos xfce startup: applying versioned defaults\"\n" +
+            "    /usr/local/libexec/hedgeyos-apply-defaults || true\n" +
+            "  fi\n" +
             "  if ! pgrep -x xfwm4 >/dev/null 2>&1; then echo \"hedgeyos xfce startup: starting xfwm4 fallback\"; xfwm4 --replace --sm-client-disable --compositor=off & fi\n" +
             "  if ! pgrep -x xfdesktop >/dev/null 2>&1; then echo \"hedgeyos xfce startup: starting xfdesktop fallback\"; xfdesktop & fi\n" +
             "  if ! pgrep -x xfce4-panel >/dev/null 2>&1; then echo \"hedgeyos xfce startup: starting xfce4-panel fallback\"; xfce4-panel & fi\n" +
@@ -608,6 +614,9 @@ public final class HedgeyosRuntimeManager {
         if (!new File(rootfs, "bin/bash").exists()) {
             throw new IOException("Rootfs health check failed: /bin/bash is missing.");
         }
+        if (!new File(rootfs, "usr/bin/devilspie2").exists()) {
+            throw new IOException("Rootfs health check failed: /usr/bin/devilspie2 is missing.");
+        }
 
         ensureLinuxBranding(context, rootfs);
         writeFile(new File(rootfs, VERSION_MARKER),
@@ -618,111 +627,96 @@ public final class HedgeyosRuntimeManager {
     private static void ensureLinuxBranding(Context context, File rootfs) throws IOException {
         File shareDir = new File(rootfs, LINUX_BRAND_DIR);
         File backgroundDir = new File(rootfs, LINUX_BACKGROUND_DIR);
-        File home = new File(rootfs, "home/hedgeyos");
         mkdirs(shareDir);
         mkdirs(backgroundDir);
-        mkdirs(home);
 
         File linuxIcon = new File(shareDir, HEDGEYOS_ICON_ASSET);
         File linuxWallpaper = new File(backgroundDir, HEDGEYOS_WALLPAPER_ASSET);
         copyBundledAsset(context, HEDGEYOS_ICON_ASSET, linuxIcon);
         copyBundledAsset(context, HEDGEYOS_WALLPAPER_ASSET, linuxWallpaper);
+        installLinuxRuntimeAsset(context, rootfs, "hedgeyos-apply-defaults",
+            "usr/local/libexec/hedgeyos-apply-defaults", 0755);
+        installLinuxRuntimeAsset(context, rootfs, "hedgeyos-window-rules.desktop",
+            "etc/xdg/autostart/hedgeyos-window-rules.desktop", 0644);
+        installLinuxRuntimeAsset(context, rootfs, "hedgeyos-window-rules.lua",
+            "etc/hedgeyos/devilspie2/hedgeyos-window-rules.lua", 0644);
+        installLinuxRuntimeAsset(context, rootfs, "Terminal.desktop",
+            "usr/share/hedgeyos/defaults/Terminal.desktop", 0644);
+        installLinuxRuntimeAsset(context, rootfs, "terminalrc",
+            "usr/share/hedgeyos/defaults/terminalrc", 0644);
+    }
 
-        File desktopConfig = new File(home, ".config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml");
-        writeFile(desktopConfig,
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-            "<channel name=\"xfce4-desktop\" version=\"1.0\">\n" +
-            "  <property name=\"backdrop\" type=\"empty\">\n" +
-            "    <property name=\"screen0\" type=\"empty\">\n" +
-            "      <property name=\"monitor0\" type=\"empty\">\n" +
-            "        <property name=\"workspace0\" type=\"empty\">\n" +
-            "          <property name=\"color-style\" type=\"int\" value=\"0\"/>\n" +
-            "          <property name=\"image-style\" type=\"int\" value=\"5\"/>\n" +
-            "          <property name=\"last-image\" type=\"string\" value=\"/usr/share/backgrounds/hedgeyos/hedgeyos-wallpaper.png\"/>\n" +
-            "          <property name=\"last-single-image\" type=\"string\" value=\"/usr/share/backgrounds/hedgeyos/hedgeyos-wallpaper.png\"/>\n" +
-            "        </property>\n" +
-            "      </property>\n" +
-            "      <property name=\"monitorVirtual-1\" type=\"empty\">\n" +
-            "        <property name=\"workspace0\" type=\"empty\">\n" +
-            "          <property name=\"color-style\" type=\"int\" value=\"0\"/>\n" +
-            "          <property name=\"image-style\" type=\"int\" value=\"5\"/>\n" +
-            "          <property name=\"last-image\" type=\"string\" value=\"/usr/share/backgrounds/hedgeyos/hedgeyos-wallpaper.png\"/>\n" +
-            "          <property name=\"last-single-image\" type=\"string\" value=\"/usr/share/backgrounds/hedgeyos/hedgeyos-wallpaper.png\"/>\n" +
-            "        </property>\n" +
-            "      </property>\n" +
-            "      <property name=\"monitorDefault\" type=\"empty\">\n" +
-            "        <property name=\"workspace0\" type=\"empty\">\n" +
-            "          <property name=\"color-style\" type=\"int\" value=\"0\"/>\n" +
-            "          <property name=\"image-style\" type=\"int\" value=\"5\"/>\n" +
-            "          <property name=\"last-image\" type=\"string\" value=\"/usr/share/backgrounds/hedgeyos/hedgeyos-wallpaper.png\"/>\n" +
-            "          <property name=\"last-single-image\" type=\"string\" value=\"/usr/share/backgrounds/hedgeyos/hedgeyos-wallpaper.png\"/>\n" +
-            "        </property>\n" +
-            "      </property>\n" +
-            "    </property>\n" +
-            "  </property>\n" +
-            "</channel>\n");
-
-        File xsettings = new File(home, ".config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml");
-        writeFile(xsettings,
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-            "<channel name=\"xsettings\" version=\"1.0\">\n" +
-            "  <property name=\"Net\" type=\"empty\">\n" +
-            "    <property name=\"ThemeName\" type=\"string\" value=\"Adwaita\"/>\n" +
-            "    <property name=\"IconThemeName\" type=\"string\" value=\"Adwaita\"/>\n" +
-            "  </property>\n" +
-            "  <property name=\"Gtk\" type=\"empty\">\n" +
-            "    <property name=\"FontName\" type=\"string\" value=\"DejaVu Sans 12\"/>\n" +
-            "    <property name=\"MonospaceFontName\" type=\"string\" value=\"DejaVu Sans Mono 12\"/>\n" +
-            "  </property>\n" +
-            "  <property name=\"Xft\" type=\"empty\">\n" +
-            "    <property name=\"DPI\" type=\"int\" value=\"120\"/>\n" +
-            "  </property>\n" +
-            "</channel>\n");
-
-        File sessionConfig = new File(home, ".config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml");
-        writeFile(sessionConfig,
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-            "<channel name=\"xfce4-session\" version=\"1.0\">\n" +
-            "  <property name=\"general\" type=\"empty\">\n" +
-            "    <property name=\"SaveOnExit\" type=\"bool\" value=\"false\"/>\n" +
-            "  </property>\n" +
-            "</channel>\n");
-
-        File windowManagerConfig = new File(home, ".config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml");
-        writeFile(windowManagerConfig,
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-            "<channel name=\"xfwm4\" version=\"1.0\">\n" +
-            "  <property name=\"general\" type=\"empty\">\n" +
-            "    <property name=\"theme\" type=\"string\" value=\"Default\"/>\n" +
-            "    <property name=\"title_font\" type=\"string\" value=\"DejaVu Sans Bold 12\"/>\n" +
-            "    <property name=\"button_layout\" type=\"string\" value=\"O|HMC\"/>\n" +
-            "    <property name=\"use_compositing\" type=\"bool\" value=\"false\"/>\n" +
-            "  </property>\n" +
-            "</channel>\n");
-
-        File terminalConfig = new File(home, ".config/xfce4/terminal/terminalrc");
-        writeFile(terminalConfig,
-            "[Configuration]\n" +
-            "FontName=DejaVu Sans Mono 12\n" +
-            "ColorForeground=#2f251a\n" +
-            "ColorBackground=#fff6dd\n" +
-            "ColorCursor=#8f5f2a\n" +
-            "ColorPalette=#2f251a;#8f3f2a;#3f6f45;#b77a24;#355a7c;#805a9b;#35706c;#fff6dd;#6f604f;#b75a3b;#5e8b59;#d59635;#51799e;#9b74ad;#55918b;#fffaf0\n");
-
-        File desktopFile = new File(home, "Desktop/hedgeyos.desktop");
-        writeFile(desktopFile,
-            "[Desktop Entry]\n" +
-            "Type=Application\n" +
-            "Name=hedgeyos\n" +
-            "Comment=Open the hedgeyos Debian terminal\n" +
-            "Exec=xfce4-terminal\n" +
-            "Icon=/usr/share/hedgeyos/hedgeyos-icon.png\n" +
-            "Terminal=false\n" +
-            "Categories=System;TerminalEmulator;\n");
+    private static void installLinuxRuntimeAsset(Context context, File rootfs, String assetName,
+                                                 String rootfsPath, int mode) throws IOException {
+        File output = new File(rootfs, rootfsPath);
+        copyBundledAsset(context, "hedgeyos-linux/" + assetName, output);
         try {
-            Os.chmod(desktopFile.getAbsolutePath(), 0755);
-        } catch (Exception ignored) {
+            Os.chmod(output.getAbsolutePath(), mode);
+        } catch (Exception e) {
+            throw new IOException("Failed to set mode on rootfs asset /" + rootfsPath, e);
         }
+    }
+
+    private static void ensureLinuxWindowPolicy(Context context) throws Exception {
+        File rootfs = rootfsDir(context);
+        if (new File(rootfs, "usr/bin/devilspie2").exists()) {
+            return;
+        }
+
+        String assetDirectory = "hedgeyos-linux/packages";
+        String[] packageNames = context.getAssets().list(assetDirectory);
+        if (packageNames == null) {
+            packageNames = new String[0];
+        }
+        Arrays.sort(packageNames);
+
+        File packageDirectory = new File(rootfs, "var/cache/hedgeyos-migration-packages");
+        deleteRecursively(packageDirectory);
+        mkdirs(packageDirectory);
+
+        int copiedPackages = 0;
+        for (String packageName : packageNames) {
+            if (!packageName.endsWith(".deb")) {
+                continue;
+            }
+            copyBundledAsset(context, assetDirectory + "/" + packageName,
+                new File(packageDirectory, packageName));
+            copiedPackages++;
+        }
+        if (copiedPackages != 2) {
+            throw new IOException("Offline Linux window-policy migration is incomplete: expected 2 packages, found " +
+                copiedPackages + ".");
+        }
+
+        mkdirs(x11TmpDir(context));
+        mkdirs(tmpDir(context));
+        File migrationLog = new File(logDir(context), "linux-migration.log");
+        List<String> command = buildDebianRootCommand(context,
+            "set -e; export DEBIAN_FRONTEND=noninteractive; " +
+                "dpkg -i /var/cache/hedgeyos-migration-packages/*.deb; " +
+                "rm -rf /var/cache/hedgeyos-migration-packages");
+        ProcessBuilder builder = new ProcessBuilder(command);
+        builder.directory(filesDir(context));
+        builder.redirectErrorStream(true);
+        builder.redirectOutput(ProcessBuilder.Redirect.appendTo(migrationLog));
+        builder.environment().put("HOME", TermuxConstants.TERMUX_HOME_DIR_PATH);
+        builder.environment().put("PATH", TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":/system/bin");
+        builder.environment().put("LD_LIBRARY_PATH", TermuxConstants.TERMUX_LIB_PREFIX_DIR_PATH);
+        builder.environment().put("TMPDIR", x11TmpDir(context).getAbsolutePath());
+        builder.environment().put("PROOT_LOADER", prootLoader(context).getAbsolutePath());
+        builder.environment().put("PROOT_TMP_DIR", tmpDir(context).getAbsolutePath());
+
+        appendLog(migrationLog, "Installing offline Linux window-policy migration.");
+        Process process = builder.start();
+        if (!process.waitFor(2, TimeUnit.MINUTES)) {
+            process.destroyForcibly();
+            throw new IOException("Offline Linux window-policy migration timed out.");
+        }
+        if (process.exitValue() != 0 || !new File(rootfs, "usr/bin/devilspie2").exists()) {
+            throw new IOException("Offline Linux window-policy migration failed with exit code " +
+                process.exitValue() + ". See linux-migration.log.");
+        }
+        appendLog(migrationLog, "Installed offline Linux window-policy migration.");
     }
 
     private static void ensureDirectories(Context context) throws IOException {

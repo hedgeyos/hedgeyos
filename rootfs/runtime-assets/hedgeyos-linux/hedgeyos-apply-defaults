@@ -1,0 +1,49 @@
+#!/bin/sh
+set -eu
+
+DEFAULTS_VERSION=1
+HEDGEYOS_HOME="${HEDGEYOS_HOME:-${HOME:-/home/hedgeyos}}"
+DEFAULTS_DIR="${HEDGEYOS_DEFAULTS_DIR:-/usr/share/hedgeyos/defaults}"
+MARKER_DIR="$HEDGEYOS_HOME/.config/hedgeyos"
+MARKER="$MARKER_DIR/defaults-version"
+DESKTOP_DIR="$HEDGEYOS_HOME/Desktop"
+
+current_version=0
+if [ -r "$MARKER" ]; then
+    current_version=$(sed -n '1p' "$MARKER" 2>/dev/null || printf '0')
+fi
+
+case "$current_version" in
+    ''|*[!0-9]*) current_version=0 ;;
+esac
+
+[ "$current_version" -lt "$DEFAULTS_VERSION" ] || exit 0
+
+mkdir -p "$MARKER_DIR" "$DESKTOP_DIR"
+
+xfconf-query -c xfwm4 -p /general/button_layout -n -t string -s 'CMHO|' || true
+xfconf-query -c xfwm4 -p /general/title_alignment -n -t string -s center || true
+xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false || true
+xfconf-query -c xfce4-session -p /general/SaveOnExit -n -t bool -s false || true
+
+xfconf-query -c xfce4-desktop -p /desktop-icons/style -n -t int -s 2 || true
+xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-home -n -t bool -s false || true
+xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-filesystem -n -t bool -s false || true
+xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-trash -n -t bool -s false || true
+xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-removable -n -t bool -s false || true
+
+terminal_config="$HEDGEYOS_HOME/.config/xfce4/terminal/terminalrc"
+mkdir -p "$(dirname "$terminal_config")"
+if [ ! -f "$terminal_config" ]; then
+    cp "$DEFAULTS_DIR/terminalrc" "$terminal_config"
+elif ! grep -q '^MiscDefaultGeometry=' "$terminal_config"; then
+    printf '%s\n' 'MiscDefaultGeometry=72x22' >> "$terminal_config"
+fi
+
+if [ -f "$DESKTOP_DIR/hedgeyos.desktop" ] &&
+   grep -q '^Name=hedgeyos$' "$DESKTOP_DIR/hedgeyos.desktop"; then
+    rm -f "$DESKTOP_DIR/hedgeyos.desktop"
+fi
+
+install -m 0755 "$DEFAULTS_DIR/Terminal.desktop" "$DESKTOP_DIR/Terminal.desktop"
+printf '%s\n' "$DEFAULTS_VERSION" > "$MARKER"

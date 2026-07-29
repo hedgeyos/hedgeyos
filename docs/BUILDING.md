@@ -76,7 +76,12 @@ GitHub Actions workflow:
 - It verifies the APK structure with `scripts/inspect-hedgeyos-apk.sh`, including
   package id, enabled X11-backed hedgeyos HOME launcher, disabled fallback HOME
   launcher, hidden Termux:X11 `MainActivity`, bundled rootfs/PRoot assets,
+  background-protection permissions, overlay artwork, Linux migration assets,
   embedded X11 native library, and absence of obvious VNC/RDP files.
+- It verifies the rootfs with `scripts/inspect-hedgeyos-rootfs.sh`, including
+  customization files, modes, owners, portrait window package, and provenance.
+- Unit CI runs `scripts/test-linux-defaults.sh` to prove migration idempotence
+  and preservation of unrelated desktop files.
 - It uploads a small `hedgeyos-apk-inspection` artifact separately from the large
   APK artifact.
 - It uploads the APK, SHA-256 file, rootfs manifests, build logs, and inspection

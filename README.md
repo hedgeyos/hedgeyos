@@ -2,20 +2,28 @@
 
 Turn an Android phone into a Debian graphical workstation and Home launcher.
 
-[Download hedgeyos v0.1.0-alpha.1 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-arm64-v8a-alpha.1-test-signed.apk)
+[Download hedgeyos v0.1.0-alpha.2 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.2/hedgeyos-arm64-v8a-alpha.2-test-signed.apk)
 
-Current status: `v0.1.0-alpha.1` is published as a GitHub prerelease and has
+Current status: `v0.1.0-alpha.2` is published as a GitHub prerelease and has
 device smoke-test evidence on an attached ARM64 phone. The alpha boots into the
 bundled Debian 13/XFCE desktop as the Android Home screen, starts embedded
 Termux:X11 from inside the hedgeyos APK, opens Debian desktop apps, exposes the
 hedgeyos recovery menu, and applies the hedgeyos wallpaper/icon branding on the
-Android and Linux sides. On-device acceptance now also covers `sudo`, `apt update`,
-and installation and execution of a Debian package.
+Android and Linux sides. On-device acceptance covers a true fresh install,
+background-survival onboarding, runtime wake-lock release/reacquisition, window
+placement, overlay drag/rotation, `apt update`, and installation and execution
+of a Debian package.
 
 This is still an alpha. Final `v0.1.0` has not been tagged: before that, the
 remaining release gate is a broader acceptance pass with production signing,
 direct Reset Debian evidence, and final release checks. See
 [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md) for the current evidence.
+
+Alpha.2 includes the first performance and stability phase: foreground runtime
+protection, a first-boot phone power-management guide, a permanent draggable
+hedgehog control, terminal-focused XFCE defaults, and portrait-safe window
+placement. The remaining optimization phases are recorded in
+[`docs/PERFORMANCE-STABILITY-ROADMAP.md`](docs/PERFORMANCE-STABILITY-ROADMAP.md).
 
 ## What hedgeyos Is
 
@@ -32,13 +40,13 @@ hedgeyos is not affiliated with, endorsed by, or released by the Termux project.
 - Sideloading enabled by the user.
 - Enough free storage for the APK, compressed rootfs, and extracted Debian tree.
 
-Published alpha.1 artifact details:
+Published alpha.2 artifact details:
 
-- Test-signed APK size: 261,786,612 bytes.
-- Bundled Debian rootfs size: 221,490,296 bytes compressed.
+- Test-signed APK size: 262,111,461 bytes.
+- Bundled Debian rootfs size: 221,639,012 bytes compressed.
 - Bundled PRoot payload size: 114,325 bytes compressed.
 - APK SHA-256:
-  `54ee061dd9c1f9105e4aeb9f3ad84422ff8451ac9fb42887688d6904ad12a194`.
+  `50384775976d9f1475634b01d440732d677157b6471e3e1231f2ee27ae856ccd`.
 - Test signing certificate SHA-256:
   `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`.
 
@@ -47,12 +55,16 @@ production-signed artifact.
 
 ## Install
 
-1. Download `hedgeyos-arm64-v8a-alpha.1-test-signed.apk` from the release above.
+1. Download `hedgeyos-arm64-v8a-alpha.2-test-signed.apk` from the release above.
 2. Install it through Android sideloading.
 3. Open hedgeyos from the app icon.
 4. Use Android's Home app chooser when prompted, or tap `Choose Home App`.
 5. During first boot, hedgeyos verifies and extracts the bundled Debian rootfs,
    starts embedded X11, then starts XFCE.
+6. In the scrollable Background setup mini-window, allow unrestricted battery
+   use and review the instructions for the phone's background and autostart
+   controls. The guide permits continuing with a warning when a vendor setting
+   cannot be changed programmatically.
 
 hedgeyos is a single-APK desktop path. It bundles Debian, PRoot, and embedded
 X11; users do not need a separate Termux app, Termux:X11 APK, VNC app, or
@@ -60,8 +72,10 @@ companion APK for the XFCE desktop.
 
 ## Screenshots And Demo
 
-The media below was captured from an attached ARM64 Android phone running
-`v0.1.0-alpha.1`.
+The first image was captured from an attached ARM64 Android phone running
+`v0.1.0-alpha.2`. The animated demos below it were recorded with alpha.1.
+
+![hedgeyos alpha.2 themed XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.2/hedgeyos-alpha.2-fresh-desktop.png)
 
 ![hedgeyos first launch reaching the XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-first-load.gif)
 
@@ -79,19 +93,41 @@ The older demo capture shows a legacy `panix@localhost` prompt from the
 pre-rename test rootfs. The current downloadable APK contains only the
 `hedgeyos` Debian account and opens terminals as `root@localhost`.
 
-## Recovery
+## Background Protection
 
-The hedgeyos Home shell includes:
+While the desktop is intentionally running, hedgeyos owns an Android foreground
+service and partial wake lock. The runtime notification remains visible, and a
+completed setup guide can always be reopened from the hedgehog control.
 
-- Start Runtime.
+The hedgehog is an activity-local control over the Linux desktop, not a
+system-wide overlay over other Android apps. It uses the transparent Hitomi
+companion artwork at `48dp`, can be dragged, remembers a normalized position,
+and stays visible and on-screen after display rotation.
+
+## Desktop And Controls
+
+XFCE remains the desktop environment and retains its panel. The default desktop
+shows one hedgeyos Terminal launcher; built-in Home, Filesystem, Trash, and
+removable-volume icons are hidden without deleting user-created desktop files.
+
+Primary terminal and file-manager windows open maximized. Window controls are
+ordered on the left as Close, Maximize, Minimize, and app icon, while the title
+remains centered. Other oversized windows receive a narrower portrait-safe
+initial size and remain user-resizable.
+
+The draggable hedgehog opens a compact, scrollable control mini-window with:
+
+- Background survival setup.
+- Open Debian Terminal.
+- Run Debian APT Check.
+- Open hedgeyos logs.
 - Restart Desktop.
 - Stop Desktop.
 - Reset Debian.
-- Open X11 Surface.
-- Open hedgeyos Logs.
-- Open hedgeyos Terminal.
+- Toggle Soft Keyboard.
 - Open Android Apps.
 - Open Android Settings.
+- Display Settings.
 - Choose Home App.
 
 These controls are present so a broken launcher build does not trap the user.
@@ -128,6 +164,8 @@ See [`docs/BUILDING.md`](docs/BUILDING.md) for current toolchain requirements.
 - [`docs/BUILDING.md`](docs/BUILDING.md)
 - [`docs/FIRSTBOOT.md`](docs/FIRSTBOOT.md)
 - [`docs/KNOWN-ISSUES.md`](docs/KNOWN-ISSUES.md)
+- [`docs/PERFORMANCE-STABILITY-ROADMAP.md`](docs/PERFORMANCE-STABILITY-ROADMAP.md)
+- [`docs/ROOTFS-CUSTOMIZATIONS.md`](docs/ROOTFS-CUSTOMIZATIONS.md)
 - [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md)
 
 ## License

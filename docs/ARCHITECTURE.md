@@ -11,6 +11,11 @@ Current repository state:
 - Java/Kotlin package namespaces remain `com.termux` for now to reduce refactor risk.
 - A hedgeyos Home activity is present and offers recovery actions.
 - `HedgeyosRuntimeService` is registered as hedgeyos's foreground runtime boundary.
+- The runtime service persists whether the desktop is intentionally running and
+  owns the corresponding partial wake lock. `SystemEventReceiver` restores that
+  desired state after Android boot.
+- `HedgeyosPowerPolicy` owns first-boot background-survival state, Android power
+  checks, safe settings intents, and manufacturer-specific guidance.
 - `HedgeyosRuntimeManager` persists first-boot/session state and can copy, verify,
   extract, configure, reset, and log the bundled Debian rootfs transaction.
 - The build produces a pinned Termux PRoot payload from verified `.deb` files,
@@ -22,8 +27,11 @@ Current repository state:
   suppress Termux:X11's standalone launcher entry.
 - `com.termux.x11.HedgeyosHomeActivity` subclasses the vendored Termux:X11
   `MainActivity`, preserving its `LorieView` surface, input, resize, clipboard,
-  and binder connection path while adding a hedgeyos emergency menu overlay and
-  runtime status on the startup screen.
+  and binder connection path while adding runtime status and the permanent
+  activity-local `HedgeyosOverlayController`.
+- The overlay uses the transparent Hitomi hedgehog artwork at `48dp`, persists
+  normalized drag coordinates, clamps them after layout or rotation changes,
+  and opens compact scrollable control and power-setup mini-windows.
 - `hedgeyosX11Bridge` starts `com.termux.x11.CmdEntryPoint` through Android
   `app_process` with `CLASSPATH` pointed at the hedgeyos APK and `TMPDIR` pointed at
   hedgeyos's private shared tmp directory.
@@ -33,7 +41,14 @@ Current repository state:
   the embedded X11 command entry point loads that library directly from the APK
   path.
 - `com.termux.x11.HedgeyosHomeActivity` applies phone-friendly X11 defaults:
-  scaled resolution, `displayScale=200`, fullscreen, and visible extra-key bar.
+  scaled resolution, `displayScale=240`, fullscreen, and visible extra-key bar.
+- Linux customizations are sourced from
+  `rootfs/runtime-assets/hedgeyos-linux`, declared by
+  `rootfs/customizations.tsv`, seeded into fresh rootfs builds, and packaged in
+  the APK for versioned migration.
+- XFCE starts `devilspie2` for event-driven portrait window policy. Primary
+  terminal and file-manager windows maximize; oversized secondary windows
+  receive a narrower initial geometry.
 
 Target runtime path:
 
@@ -47,7 +62,7 @@ Debian GUI application
 
 Device evidence:
 
-- On 2026-07-28, the published `v0.1.0-alpha.1` test APK booted the bundled
+- On 2026-07-29, the `v0.1.0-alpha.2` test APK booted the bundled
   Debian/XFCE desktop as Android Home on a CPH2499 ARM64 phone. After
   force-stop/relaunch, the runtime returned to `RUNNING` with `org.hedgeyos`,
   `hedgeyos-x11`, `xfce4-session`, `xfwm4`, `xfdesktop`, and `xfce4-panel`

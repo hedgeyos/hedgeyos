@@ -68,6 +68,7 @@ mkdir -p "$OUT_DIR"
 
 "$AAPT" dump badging "$APK" > "$OUT_DIR/aapt-badging.txt"
 "$AAPT" dump xmltree "$APK" AndroidManifest.xml > "$OUT_DIR/androidmanifest-xmltree.txt"
+"$AAPT" dump resources "$APK" > "$OUT_DIR/aapt-resources.txt"
 unzip -l "$APK" > "$OUT_DIR/apk-contents.txt"
 unzip -lv "$APK" > "$OUT_DIR/apk-contents-verbose.txt"
 sha256sum "$APK" > "$OUT_DIR/hedgeyos-arm64-v8a.apk.sha256"
@@ -117,6 +118,22 @@ contains "$OUT_DIR/apk-contents.txt" "assets/termux-proot-aarch64.tar.zst" ||
     fail "APK does not contain bundled PRoot payload"
 contains "$OUT_DIR/apk-contents.txt" "assets/termux-proot-aarch64.tar.zst.sha256" ||
     fail "APK does not contain bundled PRoot payload checksum"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-apply-defaults" ||
+    fail "APK does not contain Linux defaults migration"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-window-rules.desktop" ||
+    fail "APK does not contain Linux window-rule autostart"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-window-rules.lua" ||
+    fail "APK does not contain Linux portrait window rules"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/packages/devilspie2_" ||
+    fail "APK does not contain the offline devilspie2 migration package"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/packages/liblua5.1-0_" ||
+    fail "APK does not contain the offline Lua migration dependency"
+contains "$OUT_DIR/aapt-resources.txt" "drawable/hedgeyos_companion" ||
+    fail "APK does not contain the Hitomi-derived hedgehog overlay asset"
+contains "$OUT_DIR/androidmanifest-xmltree.txt" "android.permission.WAKE_LOCK" ||
+    fail "APK manifest is missing WAKE_LOCK"
+contains "$OUT_DIR/androidmanifest-xmltree.txt" "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" ||
+    fail "APK manifest is missing battery-optimization exemption access"
 contains "$OUT_DIR/apk-contents.txt" "lib/arm64-v8a/libXlorie.so" ||
     fail "APK does not contain embedded Termux:X11 native library"
 awk '$NF == "lib/arm64-v8a/libXlorie.so" && $2 == "Stored" { found=1 } END { exit found ? 0 : 1 }' "$OUT_DIR/apk-contents-verbose.txt" ||
@@ -134,6 +151,8 @@ if [ -n "$ROOTFS_PROVENANCE" ] && [ -f "$ROOTFS_PROVENANCE" ]; then
     cp "$ROOTFS_PROVENANCE" "$OUT_DIR/debian-trixie-arm64-rootfs.provenance"
     not_contains_regex "$ROOTFS_PROVENANCE" "vnc|tigervnc|x11vnc|novnc|xrdp" ||
         fail "rootfs package provenance contains VNC/RDP-related packages"
+    contains "$ROOTFS_PROVENANCE" "devilspie2" ||
+        fail "rootfs package provenance is missing devilspie2"
 fi
 
 {
@@ -148,6 +167,9 @@ fi
     printf 'bundled_rootfs=assets/debian-trixie-arm64-rootfs.tar.zst\n'
     printf 'bundled_proot=assets/termux-proot-aarch64.tar.zst\n'
     printf 'embedded_x11=lib/arm64-v8a/libXlorie.so\n'
+    printf 'power_protection=wake_lock_and_battery_setup\n'
+    printf 'overlay_asset=drawable/hedgeyos_companion\n'
+    printf 'linux_defaults=assets/hedgeyos-linux/hedgeyos-apply-defaults\n'
     printf 'vnc_files=absent_in_apk_listing\n'
 } > "$OUT_DIR/summary.properties"
 

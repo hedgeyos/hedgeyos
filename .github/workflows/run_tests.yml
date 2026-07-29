@@ -28,3 +28,4 @@ jobs:
     - name: Execute tests
       run: |
         ./gradlew test
+        ./scripts/test-linux-defaults.sh

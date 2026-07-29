@@ -6,19 +6,13 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -42,6 +36,7 @@ public final class HedgeyosHomeActivity extends MainActivity {
     };
 
     private TextView startupStatus;
+    private HedgeyosOverlayController overlayController;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +44,63 @@ public final class HedgeyosHomeActivity extends MainActivity {
         applyHedgeyosDisplayDefaults();
         startupStatus = findViewById(R.id.textView);
         rebrandStartupScreen();
-        addHedgeyosMenuButton();
+        overlayController = new HedgeyosOverlayController(this, new HedgeyosOverlayController.Actions() {
+            @Override
+            public void openTerminal() {
+                openHedgeyosTerminal();
+            }
+
+            @Override
+            public void runAptCheck() {
+                HedgeyosRuntimeManager.runDebianAcceptanceChecksAsync(HedgeyosHomeActivity.this);
+            }
+
+            @Override
+            public void showLogs() {
+                showHedgeyosLogs();
+            }
+
+            @Override
+            public void restartDesktop() {
+                HedgeyosRuntimeService.requestRestartDesktop(HedgeyosHomeActivity.this);
+            }
+
+            @Override
+            public void stopDesktop() {
+                HedgeyosRuntimeService.requestStopDesktop(HedgeyosHomeActivity.this);
+            }
+
+            @Override
+            public void resetDebian() {
+                confirmResetDebian();
+            }
+
+            @Override
+            public void toggleKeyboard() {
+                MainActivity.toggleKeyboardVisibility(HedgeyosHomeActivity.this);
+            }
+
+            @Override
+            public void showAndroidApps() {
+                HedgeyosHomeActivity.this.showAndroidApps();
+            }
+
+            @Override
+            public void openAndroidSettings() {
+                startActivity(new Intent(Settings.ACTION_SETTINGS));
+            }
+
+            @Override
+            public void openDisplaySettings() {
+                HedgeyosHomeActivity.this.openDisplaySettings();
+            }
+
+            @Override
+            public void chooseHomeApp() {
+                requestHomeRole();
+            }
+        });
+        overlayController.install();
         HedgeyosRuntimeService.requestStart(this);
     }
 
@@ -57,12 +108,35 @@ public final class HedgeyosHomeActivity extends MainActivity {
     public void onResume() {
         super.onResume();
         hedgeyosStatusHandler.post(hedgeyosStatusPoller);
+        if (overlayController != null) {
+            overlayController.onResume();
+        }
     }
 
     @Override
     public void onPause() {
         hedgeyosStatusHandler.removeCallbacks(hedgeyosStatusPoller);
+        if (overlayController != null) {
+            overlayController.onPause();
+        }
         super.onPause();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (overlayController != null) {
+            overlayController.onWindowFocusChanged(hasFocus);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (overlayController != null) {
+            overlayController.destroy();
+            overlayController = null;
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -83,7 +157,11 @@ public final class HedgeyosHomeActivity extends MainActivity {
         if (help instanceof Button) {
             Button button = (Button) help;
             button.setText("hedgeyos menu");
-            button.setOnClickListener(v -> showHedgeyosMenu());
+            button.setOnClickListener(v -> {
+                if (overlayController != null) {
+                    overlayController.showControlMenu();
+                }
+            });
         }
 
         View exit = findViewById(R.id.exit_button);
@@ -119,83 +197,6 @@ public final class HedgeyosHomeActivity extends MainActivity {
             .putInt("hedgeyosDisplayDefaultsVersion", HEDGEYOS_DISPLAY_DEFAULTS_VERSION)
             .commit();
         onPreferencesChanged("hedgeyosDisplayDefaultsApplied");
-    }
-
-    private void addHedgeyosMenuButton() {
-        FrameLayout content = findViewById(android.R.id.content);
-        ImageButton button = new ImageButton(this);
-        button.setImageResource(com.termux.R.drawable.hedgeyos_icon);
-        button.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        button.setPadding(dp(2), dp(2), dp(2), dp(2));
-        button.setContentDescription("hedgeyos menu");
-        button.setBackground(menuButtonBackground());
-        button.setOnClickListener(v -> showHedgeyosMenu());
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            button.setTooltipText("hedgeyos menu");
-        }
-
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP | Gravity.END);
-        params.setMargins(0, dp(12), dp(12), 0);
-        content.addView(button, params);
-    }
-
-    private void showHedgeyosMenu() {
-        String[] items = new String[] {
-            "Open Debian Terminal",
-            "Run Debian APT Check",
-            "Open hedgeyos logs",
-            "Restart Desktop",
-            "Stop Desktop",
-            "Reset Debian",
-            "Toggle Soft Keyboard",
-            "Android Apps",
-            "Android Settings",
-            "Display Settings",
-            "Choose Home App"
-        };
-
-        new AlertDialog.Builder(this)
-            .setTitle("hedgeyos")
-            .setItems(items, (dialog, which) -> {
-                switch (which) {
-                    case 0:
-                        openHedgeyosTerminal();
-                        break;
-                    case 1:
-                        HedgeyosRuntimeManager.runDebianAcceptanceChecksAsync(this);
-                        break;
-                    case 2:
-                        showHedgeyosLogs();
-                        break;
-                    case 3:
-                        HedgeyosRuntimeService.requestRestartDesktop(this);
-                        break;
-                    case 4:
-                        HedgeyosRuntimeService.requestStopDesktop(this);
-                        break;
-                    case 5:
-                        confirmResetDebian();
-                        break;
-                    case 6:
-                        MainActivity.toggleKeyboardVisibility(this);
-                        break;
-                    case 7:
-                        showAndroidApps();
-                        break;
-                    case 8:
-                        startActivity(new Intent(Settings.ACTION_SETTINGS));
-                        break;
-                    case 9:
-                        openDisplaySettings();
-                        break;
-                    case 10:
-                        requestHomeRole();
-                        break;
-                    default:
-                        break;
-                }
-            })
-            .show();
     }
 
     private void openHedgeyosTerminal() {
@@ -283,14 +284,6 @@ public final class HedgeyosHomeActivity extends MainActivity {
         HedgeyosRuntimeManager.RuntimeStatus runtimeStatus = HedgeyosRuntimeManager.getStatus(this);
         String worker = runtimeStatus.workerRunning ? " working" : "";
         startupStatus.setText("hedgeyos: " + runtimeStatus.state + worker + "\n" + runtimeStatus.detail);
-    }
-
-    private GradientDrawable menuButtonBackground() {
-        GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(Color.argb(238, 55, 42, 32));
-        drawable.setCornerRadius(dp(22));
-        drawable.setStroke(dp(1), Color.rgb(238, 184, 91));
-        return drawable;
     }
 
     private int dp(int value) {
