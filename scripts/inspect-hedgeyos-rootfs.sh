@@ -30,6 +30,20 @@ grep -Fq " ./usr/local/libexec/hedgeyos-gtk-asset-smoke" "$LISTING" ||
     fail "missing GTK asset smoke helper"
 grep -Fq " ./usr/local/libexec/hedgeyos-start-desktop" "$LISTING" ||
     fail "missing Linux desktop startup helper"
+grep -Fq " ./usr/local/libexec/hedgeyos-bounded-log" "$LISTING" ||
+    fail "missing bounded Linux logger"
+grep -Fq " ./usr/local/libexec/hedgeyos-session-guard" "$LISTING" ||
+    fail "missing desktop session guard"
+grep -Fq " ./usr/local/libexec/hedgeyos-app-supervisor" "$LISTING" ||
+    fail "missing generic GUI app supervisor"
+grep -Fq " ./usr/local/libexec/hedgeyos-launch-chromium" "$LISTING" ||
+    fail "missing warned Chromium launcher"
+grep -Fq " ./usr/local/libexec/hedgeyos-proot-seqpacket-reproducer" "$LISTING" ||
+    fail "missing ARM64 PRoot recvmsg reproducer"
+grep -Fq " ./etc/xdg/autostart/hedgeyos-session-init.desktop" "$LISTING" ||
+    fail "missing XFCE session initializer"
+grep -Fq " ./usr/local/share/applications/chromium.desktop" "$LISTING" ||
+    fail "missing supervised Chromium launcher"
 grep -Fq " ./etc/xdg/autostart/hedgeyos-window-rules.desktop" "$LISTING" ||
     fail "missing portrait window-rule autostart"
 grep -Fq " ./etc/hedgeyos/devilspie2/hedgeyos-window-rules.lua" "$LISTING" ||
@@ -46,6 +60,12 @@ grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-gtk-asset-smoke$' "$
     fail "GTK asset smoke helper ownership or mode is wrong"
 grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-start-desktop$' "$LISTING" ||
     fail "desktop startup helper ownership or mode is wrong"
+grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-app-supervisor$' "$LISTING" ||
+    fail "app supervisor ownership or mode is wrong"
+grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-launch-chromium$' "$LISTING" ||
+    fail "Chromium launcher ownership or mode is wrong"
+grep -Eq '^-rwxr-xr-x +0/0 +.* ./usr/local/libexec/hedgeyos-proot-seqpacket-reproducer$' "$LISTING" ||
+    fail "PRoot recvmsg reproducer ownership or mode is wrong"
 grep -Eq '^-rwxr-xr-x +1000/1000 +.* ./home/hedgeyos/Desktop/Terminal.desktop$' "$LISTING" ||
     fail "desktop launcher ownership or mode is wrong"
 grep -Fq "devilspie2" "$PROVENANCE" ||

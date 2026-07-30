@@ -60,11 +60,28 @@ Implemented and device-proven behavior on 2026-07-26:
   `XKB_CONFIG_ROOT` at the bundled Debian XKB directory.
 - Starts the XFCE supervisor through bundled PRoot with `PROOT_LOADER`,
   `PROOT_TMP_DIR`, and `LD_LIBRARY_PATH` pointed at the hedgeyos private prefix.
+- Starts the desktop through a foreground
+  `dbus-run-session -> hedgeyos-start-desktop -> xinitrc -> xfce4-session`
+  chain. The principal XFCE session is never backgrounded.
 - Defaults the phone display to scaled mode, `displayScale=240`, fullscreen, and
   visible extra-key bar.
 
 The X11 `TMPDIR` is the host-backed HedgeyOS runtime `/tmp` shared with the
 guest, not persistent rootfs storage.
+
+Before any new or existing rootfs starts XFCE, Android repairs oversized known
+HedgeyOS-managed logs. It preserves a bounded diagnostic tail and metadata,
+atomically replaces the dangerous file, and leaves Debian packages, home data,
+and unrelated files untouched. Repair is idempotent and runs before the
+128 MiB low-free-storage safety gate. If storage remains critically low,
+startup enters `FAILED` with a recovery message instead of repeatedly launching
+the desktop into the same unsafe condition.
+
+On every update, `ensureLinuxBranding()` refreshes the versioned guest runtime
+helpers, including the bounded logger, foreground session entry point, D-Bus
+guard, session initializer, GUI application supervisor, Chromium desktop
+wrapper, and PRoot socket reproducer. This does not replace the rootfs and does
+not remove user-installed packages.
 
 ## Existing Rootfs Migrations
 
@@ -103,7 +120,15 @@ An existing healthy rootfs must never be destroyed because a new extraction
 failed. Extraction must happen into a staging directory and move into place only
 after verification and health checks pass.
 
+Runtime safety invariant:
+
+An existing rootfs may be repaired and receive replaceable HedgeyOS system
+helpers, but ordinary APK update startup must not delete its home directory,
+remove installed packages, or require Reset Debian. Known managed logs are the
+only files eligible for automatic oversized-log repair.
+
 Remaining first-boot/recovery evidence needed before final `v0.1.0`:
 
 - In-app Reset Debian.
 - Physical keyboard behavior.
+- Broader device coverage and prolonged GUI responsiveness.

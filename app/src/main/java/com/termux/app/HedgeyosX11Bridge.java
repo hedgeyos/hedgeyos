@@ -7,8 +7,6 @@ import com.termux.BuildConfig;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +81,6 @@ final class HedgeyosX11Bridge {
 
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.redirectErrorStream(true);
-        builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
         builder.environment().put("CLASSPATH", context.getPackageCodePath());
         builder.environment().put("TMPDIR", tmpDir.getAbsolutePath());
         boolean diagnostic = configureDebugEnvironment(
@@ -112,6 +109,10 @@ final class HedgeyosX11Bridge {
         appendLog(context, logFile, "XKB_CONFIG_ROOT=" + builder.environment().get("XKB_CONFIG_ROOT"));
         appendLog(context, logFile, "X11 session mode=" + (diagnostic ? "DIAGNOSTIC" : "NORMAL"));
         Process process = builder.start();
+        HedgeyosBoundedLog.pump(
+            process,
+            logFile,
+            HedgeyosRuntimeManager.managedPublicLogFile(context, logFile.getName()));
         synchronized (LOCK) {
             sX11Process = process;
         }
@@ -136,7 +137,9 @@ final class HedgeyosX11Bridge {
                 }
             }
             HedgeyosProcessOwner.clear(pidFile);
-            throw new IOException("Embedded X11 server exited during startup with code " + exitCode + ".\n" + tailText(readFile(logFile), 2400));
+            throw new IOException(
+                "Embedded X11 server exited during startup with code " + exitCode +
+                    ".\n" + HedgeyosBoundedLog.readTail(logFile, 2400));
         } catch (IllegalThreadStateException stillRunning) {
             appendLog(context, logFile, "Embedded Termux:X11 server is running.");
         }
@@ -217,38 +220,12 @@ final class HedgeyosX11Bridge {
     }
 
     private static void appendLog(File file, String text) {
-        try {
-            mkdirs(file.getParentFile());
-            try (OutputStreamWriter writer = new OutputStreamWriter(new java.io.FileOutputStream(file, true), StandardCharsets.UTF_8)) {
-                writer.write(text);
-                writer.write('\n');
-            }
-        } catch (IOException ignored) {
-        }
+        HedgeyosBoundedLog.append(file, text + "\n");
     }
 
     private static void appendLog(Context context, File file, String text) {
         appendLog(file, text);
         HedgeyosRuntimeManager.appendPublicLog(context, file.getName(), text + "\n");
-    }
-
-    private static String readFile(File file) {
-        if (file == null || !file.exists()) {
-            return "";
-        }
-        try {
-            byte[] data = java.nio.file.Files.readAllBytes(file.toPath());
-            return new String(data, StandardCharsets.UTF_8);
-        } catch (IOException ignored) {
-            return "";
-        }
-    }
-
-    private static String tailText(String text, int maxChars) {
-        if (text == null || text.length() <= maxChars) {
-            return text == null ? "" : text;
-        }
-        return text.substring(text.length() - maxChars);
     }
 
     private static void mkdirs(File dir) throws IOException {

@@ -4,6 +4,14 @@ hedgeyos-linux/hedgeyos-runtime-preflight	/usr/local/libexec/hedgeyos-runtime-pr
 hedgeyos-linux/hedgeyos-gtk-asset-smoke	/usr/local/libexec/hedgeyos-gtk-asset-smoke	0:0	0755	replace-system
 hedgeyos-linux/migration-packages.tsv	/usr/share/hedgeyos/migration-packages.tsv	0:0	0644	replace-system
 hedgeyos-linux/hedgeyos-start-desktop	/usr/local/libexec/hedgeyos-start-desktop	0:0	0755	replace-system
+hedgeyos-linux/hedgeyos-bounded-log	/usr/local/libexec/hedgeyos-bounded-log	0:0	0755	replace-system
+hedgeyos-linux/hedgeyos-session-guard	/usr/local/libexec/hedgeyos-session-guard	0:0	0755	replace-system
+hedgeyos-linux/hedgeyos-app-supervisor	/usr/local/libexec/hedgeyos-app-supervisor	0:0	0755	replace-system
+hedgeyos-linux/hedgeyos-launch-chromium	/usr/local/libexec/hedgeyos-launch-chromium	0:0	0755	replace-system
+hedgeyos-linux/hedgeyos-proot-seqpacket-reproducer	/usr/local/libexec/hedgeyos-proot-seqpacket-reproducer	0:0	0755	replace-system
+hedgeyos-linux/hedgeyos-session-init	/usr/local/libexec/hedgeyos-session-init	0:0	0755	replace-system
+hedgeyos-linux/hedgeyos-session-init.desktop	/etc/xdg/autostart/hedgeyos-session-init.desktop	0:0	0644	replace-system
+hedgeyos-linux/chromium.desktop	/usr/local/share/applications/chromium.desktop	0:0	0644	replace-system
 hedgeyos-linux/hedgeyos-window-rules.desktop	/etc/xdg/autostart/hedgeyos-window-rules.desktop	0:0	0644	replace-system
 hedgeyos-linux/hedgeyos-window-rules.lua	/etc/hedgeyos/devilspie2/hedgeyos-window-rules.lua	0:0	0644	replace-system
 hedgeyos-linux/hedgeyos-menu.png	/usr/share/hedgeyos/hedgeyos-menu.png	0:0	0644	replace-system

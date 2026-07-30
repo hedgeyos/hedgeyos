@@ -2,19 +2,20 @@
 
 Date: 2026-07-30
 
-Current status: `v0.1.0-alpha.5` is a published, test-signed GitHub
-prerelease. It contains the confirmed X11 diagnostic-overhead and GTK SVG
-runtime fixes below and is not the final production-signed `v0.1.0` release.
+Current status: `v0.1.0-alpha.6` passed its clean-build and objective device
+gates and is the current test-signed GitHub prerelease. Alpha.6 adds runtime
+containment and lifecycle fixes to alpha.5's X11 diagnostic-overhead and GTK
+SVG repairs. It is not the final production-signed `v0.1.0` release.
 
 Release:
 
-- URL: <https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.5>
-- APK: `hedgeyos-arm64-v8a-alpha.5-test-signed.apk`
-- Version: `0.1.0-alpha.5`
-- Version code: `5`
-- APK size: 267,281,395 bytes
+- URL: <https://github.com/hedgeyos/hedgeyos/releases/tag/v0.1.0-alpha.6>
+- APK: `hedgeyos-arm64-v8a-alpha.6-test-signed.apk`
+- Version: `0.1.0-alpha.6`
+- Version code: `6`
+- APK size: 266,430,161 bytes
 - APK SHA-256:
-  `76eb866c89e5efcbf7d65e2f312fa237b5db2d50c08c8b307cf872bcd627a298`
+  `2d6e514b54aca757f12573b2eda79f73ff69e77f27c3159dfce1eceff61152bf`
 - Test signing certificate SHA-256:
   `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`
 - `apksigner verify --verbose`: v2 and v3 signatures verified.
@@ -30,7 +31,7 @@ Device:
 `scripts/inspect-hedgeyos-apk.sh` passed against the signed release candidate:
 
 ```text
-sha256=76eb866c89e5efcbf7d65e2f312fa237b5db2d50c08c8b307cf872bcd627a298
+sha256=2d6e514b54aca757f12573b2eda79f73ff69e77f27c3159dfce1eceff61152bf
 package=org.hedgeyos
 launcher=com.termux.x11.HedgeyosHomeActivity
 fallback_home_activity_enabled=false
@@ -48,15 +49,19 @@ linux_runtime_preflight=assets/hedgeyos-linux/hedgeyos-runtime-preflight
 linux_gtk_asset_smoke=assets/hedgeyos-linux/hedgeyos-gtk-asset-smoke
 linux_migration_manifest=assets/hedgeyos-linux/migration-packages.tsv
 linux_desktop_startup=assets/hedgeyos-linux/hedgeyos-start-desktop
+linux_bounded_logger=assets/hedgeyos-linux/hedgeyos-bounded-log
+linux_app_supervisor=assets/hedgeyos-linux/hedgeyos-app-supervisor
+linux_chromium_launcher=assets/hedgeyos-linux/hedgeyos-launch-chromium
+proot_recvmsg_reproducer=assets/hedgeyos-linux/hedgeyos-proot-seqpacket-reproducer
 vnc_files=absent_in_apk_listing
 ```
 
 The rebuilt Debian rootfs also passed
 `scripts/inspect-hedgeyos-rootfs.sh`.
 
-- Compressed size: 223,940,166 bytes
+- Compressed size: 223,067,304 bytes
 - SHA-256:
-  `c9858719da4ddc64e3aa74a55b21acff9eb1cf80ce6a8a9562570a3d4162dbbc`
+  `604b955f697358374e25f88adfa50390137731b6adfcdc4e8f750e09a6d91ba7`
 - Required portrait-window package: `devilspie2`
 - Required GTK SVG loader package: `librsvg2-common`
 - Declarative customization manifest:
@@ -434,6 +439,285 @@ Clean rootfs SHA-256:
 No subjective responsiveness result is inferred from successful boot,
 screenshots, process liveness, or ADB access.
 
+## Alpha.6 Device Verification
+
+Objective Codex checks ran on the same attached `CPH2499` ARM64 phone. The exact
+final APK was signed, inspected, and update-installed with:
+
+```text
+adb install --no-incremental -r
+Success
+versionCode=6
+versionName=0.1.0-alpha.6
+```
+
+Android retained the original `firstInstallTime`, and HedgeyOS reused the
+existing Debian filesystem. Existing migration markers, the package database,
+home-directory entries, and installed applications remained present. No
+`Reset Debian`, app-data clear, or reinstall was used for the final test.
+
+Before launch, the test injected a sparse 6 GiB legacy managed log that occupied
+only a small number of physical blocks. Startup sought directly to its tail,
+retained 1 MiB, recorded the original 6,442,450,978-byte size and repair
+metadata, and then applied the normal bounded-log limits. It did not scan the
+entire sparse file or replace the rootfs.
+
+The exact foreground chain on device was:
+
+```text
+org.hedgeyos
+  -> hedgeyos-x11
+  -> proot
+    -> dbus-run-session
+      -> hedgeyos-start-desktop
+        -> xfce4-session
+```
+
+The active report recorded the exact D-Bus and XFCE identities, a responsive
+session bus, zero measured application orphans, all three bounded ARM64
+`SOCK_SEQPACKET` lifecycle cases, GTK SVG loader/cache/decode PASS, X11
+diagnostic mode OFF, and:
+
+```text
+runtime_logging=BOUNDED
+runtime_log_usage_bytes=1199079
+runtime_log_budget_bytes=16777216
+oversized_legacy_logs_repaired=YES
+summary=PASS fatal=0
+```
+
+The desktop reached XFCE, and a maximized terminal opened through the one-tap
+desktop launcher. Chromium's product launcher displayed its per-launch warning
+with `Cancel` as the safe default. A targeted Debian-user Chromium smoke run
+then passed through `hedgeyos-app-supervisor`. Restart Desktop terminated the
+recorded Chromium descendants, XFCE, D-Bus, PRoot, and X11 in order, then
+returned to a fresh desktop chain. The bounded post-exit observation found:
+
+- Zero remaining guest Chromium or Chromium zygote processes.
+- Zero increase in the bounded ENOSYS count.
+- No growing application or session log.
+- No active application-supervisor record or measured orphan.
+- A healthy replacement D-Bus, XFCE session, panel, window manager, and
+  desktop.
+
+An Android force-stop removed the HedgeyOS runtime tree. A cold relaunch reached
+XFCE again and returned `summary=PASS fatal=0`. The normal final process
+snapshot contained no HedgeyOS-created `logcat --pid` diagnostic child or
+defunct diagnostic logger.
+
+Evidence is under:
+
+```text
+build/device-evidence/chromium-dbus-enosys-after-20260730-030330/
+```
+
+Primary captures:
+
+- `hedgeyos-alpha.6-desktop.png`
+- `hedgeyos-alpha.6-terminal.png`
+
+Final artifact:
+
+- APK size: 266,430,161 bytes
+- APK SHA-256:
+  `2d6e514b54aca757f12573b2eda79f73ff69e77f27c3159dfce1eceff61152bf`
+- Signing certificate SHA-256:
+  `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`
+- Rootfs SHA-256:
+  `604b955f697358374e25f88adfa50390137731b6adfcdc4e8f750e09a6d91ba7`
+- PRoot payload SHA-256:
+  `0716e7f548169e1a5039e3b4958c27b4dd334a0248ff13123e2f2cefada4909a`
+
+These are objective liveness, lifecycle, containment, and storage-safety
+results. Prolonged Chromium and Geany responsiveness remains
+`PENDING_HUMAN_TEST`.
+
+## Chromium, D-Bus, And PRoot Runaway Postmortem
+
+### Confirmed Failure
+
+The affected phone was inspected from inside the live Debian/XFCE session while
+the desktop was nearly unusable. Chromium's browser process first reported:
+
+```text
+FATAL: D-Bus connection was disconnected. Aborting.
+```
+
+At least two zygote descendants survived the browser process. They repeatedly
+reported:
+
+```text
+Error reading message from browser: Function not implemented (38)
+```
+
+Error 38 is `ENOSYS`. This was a tight loop, not a one-time shutdown message.
+Because the old desktop wrapper had redirected the entire inherited desktop
+stdout/stderr stream directly to `xfce-session.log`, the loop grew that file
+from about 3.26 GB to 3.33 GB in approximately two seconds, roughly 33 MB/s.
+The file later reached about 5.93 GB. PRoot syscall activity, storage writes,
+page-cache pressure, CPU use, and Android swap pressure rose together.
+
+Bounded forensic evidence is preserved under:
+
+```text
+build/device-evidence/chromium-dbus-enosys-before-20260730-010746/
+```
+
+It contains process trees, log metadata, bounded D-Bus/ENOSYS samples, open-file
+evidence, memory/storage state, and package/runtime identity. The phone was also
+under substantial system-wide RAM and swap pressure. That pressure may have
+contributed to the initial browser failure, but it does not explain or excuse
+the surviving process loop or unbounded logging.
+
+Ordinary Ubuntu does not combine this Android PRoot syscall-translation path,
+the app-private XFCE/D-Bus wrapper, Android memory scheduling, and the inherited
+HedgeyOS session-log descriptor. Its native kernel and conventional user
+session therefore do not reproduce this exact failure chain. Native Ubuntu
+applications can still emit excessive output, which is why the bounded logger
+and generic application supervisor are product safeguards rather than a
+Chromium-only workaround.
+
+### D-Bus Lifetime Root Cause
+
+The old chain entered `dbus-run-session`, ran a custom shell wrapper, launched
+`startxfce4` in the background, performed more wrapper work, and waited on an
+indirect process. The session bus therefore followed the wrapper's lifetime,
+not an explicit foreground XFCE session. Historical process evidence showed
+desktop descendants surviving after their session relationship had broken; no
+independent D-Bus crash record was found.
+
+Alpha.6 uses this foreground chain:
+
+```text
+Android runtime supervisor
+  -> PRoot desktop process
+    -> dbus-run-session
+      -> hedgeyos-start-desktop
+        -> /etc/xdg/xfce4/xinitrc
+          -> xfce4-session
+```
+
+The installed Debian `xinitrc` was inspected and verified to end by executing
+`xfce4-session`, preserving the foreground PID. Startup records the exact PRoot,
+D-Bus, and XFCE PID plus process-start ticks. Stop requests terminate supervised
+applications, XFCE, D-Bus, PRoot, and X11 in that order. PID/start-time,
+command, UID, parent, and role checks prevent PID reuse or broad same-UID
+cleanup. Unexpected D-Bus death is monitored and reported as a contained fatal
+session failure.
+
+### PRoot And ENOSYS Isolation
+
+A bounded ARM64 reproducer now exercises Chromium-like Unix
+`SOCK_SEQPACKET`/`recvmsg`, close-on-exec descriptors, ancillary data, and
+normal, aborted, or killed parent lifecycles. It exits safely and records errno
+instead of looping.
+
+The current tests produced successful receive plus EOF and zero ENOSYS results:
+
+- Ubuntu native control: PASS.
+- ARM64 Linux under QEMU control: PASS.
+- Native Android userspace on the test phone: PASS.
+- Inside the published HedgeyOS PRoot guest: PASS.
+
+The simplified reproducer therefore does not recreate the historical
+Chromium-specific ENOSYS path. This does not prove that PRoot was unrelated.
+The exact low-level combination of Chromium sandbox/process ancestry, PRoot
+ptrace translation, socket state, and Android pressure remains unresolved.
+
+Payload inspection also found a provenance defect: the committed binary was
+actually PRoot `5.1.107.87`, while earlier build provenance and the installed
+marker named different patch versions. Alpha.6 pins and verifies current Termux
+PRoot `5.1.107.89` and its exact package/payload checksums. Upstream `.89`
+contains no identified fix for this particular recvmsg behavior, so the version
+refresh is not presented as the ENOSYS solution. The release mechanism is the
+correct D-Bus lifecycle plus generic descendant and output containment.
+
+### Generic Application Containment
+
+`hedgeyos-app-supervisor` is a reusable launcher for Chromium and future
+multi-process GUI applications. It creates a dedicated process session, acts as
+a child subreaper, and records the application instance, executable, leader
+PID/start time, process group, process session, HedgeyOS session, and observed
+descendants. After the leader exits it allows a short graceful period, signals
+only exact recorded survivors, reaps them, and clears the record. Stale records
+from an earlier HedgeyOS session are recovered before normal desktop use.
+
+Chromium's desktop launcher now uses this supervisor without changing the
+Chromium binary or using process-name-wide cleanup. On the test phone, root
+launch correctly refused to run without `--no-sandbox`; a Debian-user launch
+with either the setuid sandbox or user-namespace mode exited with code 133
+because those Linux sandbox mechanisms cannot initialize under this Android
+PRoot. A diagnostic Debian-user launch with `--no-sandbox` worked.
+
+The product launcher therefore does not add the flag silently. It shows an
+explicit warning on every launch, defaults to Cancel, explains the reduced
+guest-file isolation, and only then starts the Debian-user Chromium session
+through the generic process/output supervisor. This disclosed compatibility
+path is not presented as the fix for D-Bus, ENOSYS, orphaning, or unbounded
+output. Runtime reporting measures current recorded orphans rather than
+assuming zero.
+
+## Unbounded Runtime Logging Postmortem
+
+The old `exec >>"$HEDGEYOS_SESSION_LOG" 2>&1` architecture gave every XFCE
+descendant a direct append descriptor to an unlimited persistent file. Renaming
+that file periodically would not have helped: a noisy process could retain the
+old descriptor and continue consuming storage.
+
+Alpha.6 routes desktop output through a draining bounded logger. The producer
+never owns the persistent file descriptor. The logger rotates while the
+producer remains alive, preserves a small useful sample, collapses repeated
+lines, rate-limits sustained output, records suppression counts, and continues
+draining discarded bytes so a full quota does not block the producer.
+
+Current limits are:
+
+- Desktop/session log: 1 MiB current file plus three rotations.
+- Android-managed runtime log: 1 MiB current file plus three rotations.
+- Supervised application log: 512 KiB current file plus two rotations.
+- Desktop stream rate: 128 KiB/s.
+- Supervised application stream rate: 64 KiB/s.
+- Managed log-directory budget: 16 MiB.
+- Android startup refusal below 128 MiB of free storage, after repair runs.
+
+The 16 MiB ceiling is recursive across session and per-application logs.
+Concurrent guest loggers use a shared lock and byte ledger, reconcile against
+actual file sizes, delete old rotations first, and suppress new persistent
+bytes when the remaining quota is exhausted while continuing to drain the
+producer. Cumulative rate and duplicate-suppression counts remain visible in
+status metadata.
+
+Session, X11, runtime, first-boot, migration, application, lifecycle, and
+suppression records remain separate. Android log viewing reads only a bounded
+tail and displays file size and truncation state. It no longer reads a
+potentially multi-gigabyte managed log into memory.
+
+At startup, HedgeyOS repairs only known managed logs over 8 MiB. Repair seeks
+directly to the final 1 MiB, writes that bounded tail to a replacement file,
+records original size, modification time, retained size, path, and repair time,
+and removes obsolete managed rotations. It does not scan millions of lines,
+touch user documents, replace the rootfs, or delete installed packages. A
+second run is a no-op.
+
+Automated coverage includes:
+
+- A simulated 32 MiB output flood.
+- Repeated-line collapse and suppression accounting.
+- Rotation and aggregate budget checks.
+- Recursive aggregate-budget saturation while draining a 32 MiB producer.
+- A sparse 6 GiB Android-side legacy repair.
+- Guest-side interrupted/idempotent repair behavior.
+- Bounded tail reading.
+- Leader exit, descendant containment, stubborn-child termination, unrelated
+  process preservation, stale-session recovery, reused-PID rejection, and
+  record cleanup.
+- Direct foreground D-Bus/XFCE contracts and unexpected D-Bus containment.
+- The three bounded PRoot socket-lifecycle modes.
+
+Final alpha.6 update-install, Chromium, restart, force-stop/relaunch, and
+legacy-log repair evidence is recorded in the alpha.6 device section above.
+Prolonged subjective responsiveness remains `PENDING_HUMAN_TEST`.
+
 ## Automated Verification
 
 Passed:
@@ -446,9 +730,12 @@ Passed:
 - `scripts/test-linux-defaults.sh`
 - `scripts/test-linux-runtime.sh`
 - `scripts/test-linux-migrations.sh`
+- `scripts/test-runtime-containment.sh`
+- `scripts/test-proot-seqpacket-reproducer.sh`
+- `scripts/test-proot-payload.sh`
 - `rootfs/verify-gtk-svg.sh` during the clean rootfs build
 - `rootfs/verify-migration-packages.sh` during the clean rootfs build
-- ShellCheck 0.9.0 for the changed rootfs/runtime test scripts
+- ShellCheck 0.10.0 for the changed rootfs/runtime test scripts
 - `git diff --check`
 
 The build retains pre-existing Kotlin metadata diagnostics from lint tooling,
@@ -463,6 +750,7 @@ refresh path.
 
 ## Release Decision
 
-`v0.1.0-alpha.5` is suitable as a test-signed public prerelease APK. Final
-`v0.1.0` still requires production signing, extended Geany and Chromium
-responsiveness testing, physical-keyboard testing, and broader device coverage.
+`v0.1.0-alpha.6` passed every objective publication gate and is suitable as a
+test-signed public prerelease APK. Final `v0.1.0` still requires production
+signing, extended Geany and Chromium responsiveness testing,
+physical-keyboard testing, and broader device coverage.

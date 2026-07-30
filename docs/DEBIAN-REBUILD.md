@@ -7,14 +7,19 @@ must remain reproducible from source files in this repository.
 ## Sources Of Truth
 
 - `rootfs/build-rootfs.sh`: Debian suite, repositories, architecture, package
-  set, archive construction, ownership gates, checksum, and provenance.
+  set, clean-tree construction, checksum, and provenance.
+- `rootfs/Containerfile`: reproducible privileged Debian rootfs build
+  environment for hosts that do not have the required tools.
+- `rootfs/finalize-rootfs.sh`: customization, GTK decode, migration closure,
+  ownership, archive, and inspection gates shared by rootfs builds.
 - `rootfs/configure-rootfs.sh`: accounts, APT sources, sudo policy, temporary
   directory modes, cleanup, and application of the customization manifest.
 - `rootfs/customizations.tsv`: destination, numeric owner, mode, and policy for
   every hedgeyos Linux asset.
 - `rootfs/runtime-assets/hedgeyos-linux/`: XFCE defaults, branding, desktop
   startup, runtime preflight, GTK decode smoke test, migration manifest and
-  packages, window rules, and terminal launcher.
+  packages, bounded logger, session guard, GUI application supervisor, PRoot
+  reproducer, window rules, and terminal launcher.
 - `rootfs/baselines/v0.1.0-alpha.4-dpkg-status`: exact package database used to
   prove the currently published baseline's offline migration closure.
 - `app/src/main/java/com/termux/app/HedgeyosRuntimeManager.java`: Android
@@ -45,6 +50,14 @@ A new Debian base must preserve all of these behaviors:
 - Host-backed `/tmp` and `/dev/shm` mode `1777`; `/run` mode `0755`;
   `/run/lock` mode `1777`; per-user runtime directories mode `0700`.
 - PRoot options and bind order remain centralized in `HedgeyosGuestRuntime`.
+- The foreground desktop chain remains
+  PRoot -> `dbus-run-session` -> HedgeyOS setup -> XFCE `xinitrc` ->
+  `xfce4-session`; do not reintroduce a background principal session.
+- Desktop output is piped through the bounded logger. No GUI descendant may
+  inherit a direct descriptor to an unlimited persistent file.
+- The session guard, application supervisor, Chromium wrapper, session
+  initializer, and ARM64 PRoot socket reproducer remain installed as root-owned
+  runtime assets.
 - The preflight verifies POSIX shared memory, memfd, System V shared memory,
   D-Bus, procfs, sysfs, X11, SVG loader/cache registration, and real GTK asset
   decoding. Interactive `DISPLAY=:1.0` and startup
@@ -55,6 +68,9 @@ A new Debian base must preserve all of these behaviors:
 - Existing installations receive idempotent runtime/default updates without a
   Debian reset. Offline package repairs use generation-specific durable markers
   and block desktop startup until post-install verification succeeds.
+- PRoot package provenance is separate from Debian rootfs provenance. The
+  committed payload must report the same version as its build pin, checksum,
+  installed marker, and generated provenance.
 
 ## Rebase Checklist
 
@@ -96,11 +112,37 @@ A new Debian base must preserve all of these behaviors:
     `hedgeyos-apply-defaults` when existing installations need new XFCE values.
 14. Update Android's existing-rootfs refresh list in `ensureLinuxBranding()` if
     a new replaceable system asset is added.
+15. Rebuild `hedgeyos-proot-seqpacket-reproducer` for ARM64 when its C source or
+    toolchain contract changes:
+
+    ```sh
+    ./scripts/build-proot-seqpacket-reproducer.sh
+    ./scripts/test-proot-seqpacket-reproducer.sh
+    ```
+
+16. Verify the committed PRoot payload and its embedded binary identity:
+
+    ```sh
+    ./scripts/test-proot-payload.sh
+    ```
 
 ## Build And Inspect
 
-Use a Debian build host with `mmdebstrap`, `zstd`, and a verified Debian archive
-keyring:
+The preferred clean build uses the repository container definition:
+
+```sh
+podman build -t hedgeyos-rootfs-builder:trixie -f rootfs/Containerfile .
+podman run --rm --privileged --security-opt label=disable \
+  -e OUT_DIR=/work/build/rootfs \
+  -v "$PWD:/work" \
+  localhost/hedgeyos-rootfs-builder:trixie
+```
+
+The container is privileged only for `mmdebstrap` namespace and mount work.
+Source and output stay in the mounted checkout.
+
+Alternatively, use a Debian build host with `mmdebstrap`, `zstd`, and a
+verified Debian archive keyring:
 
 ```sh
 sudo env \
@@ -116,7 +158,11 @@ sudo env \
 ./scripts/test-linux-defaults.sh
 ./scripts/test-linux-runtime.sh
 ./scripts/test-linux-migrations.sh
-shellcheck rootfs/*.sh scripts/test-linux-*.sh
+./scripts/test-runtime-containment.sh
+./scripts/test-proot-seqpacket-reproducer.sh
+./scripts/test-proot-payload.sh
+shellcheck rootfs/*.sh scripts/test-linux-*.sh \
+  scripts/test-runtime-containment.sh scripts/test-proot-*.sh
 ```
 
 Then copy the generated archive and checksum into APK assets, or let CI do so,
@@ -148,6 +194,13 @@ For each path verify:
   application work.
 - Restart Desktop and Android force-stop/relaunch recover without deleting
   installed Debian packages.
+- Session D-Bus and XFCE retain exact live process identities throughout the
+  test.
+- Chromium launches through the generic supervisor and exits without a
+  continuing zygote/ENOSYS loop.
+- Runtime logs remain within their session, application, and aggregate budgets.
+- An oversized sparse legacy session log is repaired on update without Reset
+  Debian.
 - The separate `com.termux` package is unchanged.
 
 Record the archive SHA-256, APK SHA-256, signing certificate, provenance,

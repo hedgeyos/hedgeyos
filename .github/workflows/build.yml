@@ -38,12 +38,26 @@ jobs:
         run: |
           shellcheck \
             rootfs/build-rootfs.sh \
+            rootfs/finalize-rootfs.sh \
             rootfs/configure-rootfs.sh \
             rootfs/verify-gtk-svg.sh \
             rootfs/verify-migration-packages.sh \
             rootfs/runtime-assets/hedgeyos-linux/hedgeyos-runtime-preflight \
+            rootfs/runtime-assets/hedgeyos-linux/hedgeyos-session-init \
             scripts/test-linux-runtime.sh \
-            scripts/test-linux-migrations.sh
+            scripts/test-linux-migrations.sh \
+            scripts/test-runtime-containment.sh \
+            scripts/test-proot-seqpacket-reproducer.sh \
+            scripts/test-proot-payload.sh
+
+      - name: Run Linux runtime safety tests
+        run: |
+          ./scripts/test-linux-defaults.sh
+          ./scripts/test-linux-runtime.sh
+          ./scripts/test-linux-migrations.sh
+          ./scripts/test-runtime-containment.sh
+          ./scripts/test-proot-seqpacket-reproducer.sh
+          ./scripts/test-proot-payload.sh
 
       - name: Fetch Debian archive keyring
         run: |
@@ -75,8 +89,7 @@ jobs:
 
       - name: Verify pinned PRoot payload
         run: |
-          cd app/src/main/assets
-          sha256sum -c termux-proot-aarch64.tar.zst.sha256
+          ./scripts/test-proot-payload.sh
 
       - name: Build unsigned ARM64 APK
         env:

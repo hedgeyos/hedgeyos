@@ -24,6 +24,8 @@ hedgeyos is an independent derivative and is not an official Termux release.
 
 - Source packages: Termux `proot`, `libandroid-shmem`, and `libtalloc`.
 - Binary source: https://packages.termux.dev/apt/termux-main
+- Current PRoot package version: `5.1.107.89`; exact package and payload
+  checksums are recorded in `UPSTREAMS.md` and generated provenance.
 - Use: Bundled unprivileged Debian runtime payload under hedgeyos's private prefix.
 - License notices: The payload keeps package copyright files under
   `usr/share/doc/*/copyright`.

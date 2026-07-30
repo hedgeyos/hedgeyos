@@ -44,7 +44,7 @@ check_directory() {
 }
 
 printf 'hedgeyos Linux runtime report\n'
-printf 'version=2\n'
+printf 'version=3\n'
 printf 'display=%s\n' "${DISPLAY:-unset}"
 printf 'xdg_runtime_dir=%s\n' "${XDG_RUNTIME_DIR:-unset}"
 
@@ -168,17 +168,184 @@ else
     unsupported sysv-ipc "python3 is not installed"
 fi
 
-if command -v dbus-run-session >/dev/null 2>&1; then
-    # shellcheck disable=SC2016
-    if dbus-run-session -- sh -c 'test -n "${DBUS_SESSION_BUS_ADDRESS:-}"'; then
-        pass session-dbus "dbus-run-session created a private session bus"
-    else
-        fatal session-dbus "dbus-run-session failed"
-    fi
-elif command -v dbus-launch >/dev/null 2>&1; then
-    warning session-dbus "dbus-run-session is absent; desktop will use dbus-launch"
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    fatal session-dbus "DBUS_SESSION_BUS_ADDRESS is unset in the active desktop session"
+elif dbus-send --session --type=method_call --print-reply \
+    --dest=org.freedesktop.DBus / org.freedesktop.DBus.ListNames >/dev/null 2>&1; then
+    pass session-dbus "the active desktop session bus replied at $DBUS_SESSION_BUS_ADDRESS"
 else
-    fatal session-dbus "no session D-Bus launcher is installed"
+    fatal session-dbus "the active desktop session bus did not reply"
+fi
+
+read_identity_field() {
+    sed -n "s/^$2=//p" "$1" 2>/dev/null | sed -n '1p'
+}
+
+dbus_identity=/run/hedgeyos-processes/session-dbus.identity
+xfce_identity=/run/hedgeyos-processes/xfce-session.identity
+dbus_pid=$(read_identity_field "$dbus_identity" pid)
+dbus_ticks=$(read_identity_field "$dbus_identity" start_ticks)
+xfce_pid=$(read_identity_field "$xfce_identity" pid)
+xfce_ticks=$(read_identity_field "$xfce_identity" start_ticks)
+if [ -n "$dbus_pid" ] && [ -r "/proc/$dbus_pid/stat" ] &&
+    [ "$(awk '{print $22}' "/proc/$dbus_pid/stat" 2>/dev/null)" = "$dbus_ticks" ]; then
+    pass session-dbus-process "owned D-Bus pid=$dbus_pid is alive"
+else
+    fatal session-dbus-process "the recorded session D-Bus identity is not alive"
+fi
+if [ -n "$xfce_pid" ] && [ -r "/proc/$xfce_pid/stat" ] &&
+    [ "$(awk '{print $22}' "/proc/$xfce_pid/stat" 2>/dev/null)" = "$xfce_ticks" ]; then
+    pass xfce-session-process "owned XFCE session pid=$xfce_pid is alive"
+else
+    fatal xfce-session-process "the recorded XFCE session identity is not alive"
+fi
+
+printf 'session_dbus_pid=%s\n' "${dbus_pid:-unset}"
+printf 'xfce_session_pid=%s\n' "${xfce_pid:-unset}"
+printf 'session_dbus_address=%s\n' "${DBUS_SESSION_BUS_ADDRESS:-unset}"
+
+active_supervisor_records=$(find /run/hedgeyos-processes/apps \
+    -maxdepth 1 -type f -name '*.json' 2>/dev/null | wc -l)
+printf 'active_application_supervisors=%s\n' "$active_supervisor_records"
+orphaned_application_descendants=$(python3 - \
+    /run/hedgeyos-processes/apps "${HEDGEYOS_SESSION_ID:-unknown}" <<'PY'
+import json
+import pathlib
+import sys
+
+
+def exact_alive(pid, expected_start):
+    try:
+        stat = pathlib.Path(f"/proc/{pid}/stat").read_text().split()
+        return stat[21] == expected_start and stat[2] != "Z"
+    except (FileNotFoundError, IndexError, PermissionError):
+        return False
+
+
+count = 0
+process_dir = pathlib.Path(sys.argv[1])
+current_session = sys.argv[2]
+for record_path in process_dir.glob("*.json"):
+    try:
+        record = json.loads(record_path.read_text())
+        leader_pid = int(record["leaderPid"])
+        leader_start = str(record["leaderStart"])
+        record_session = str(record.get("hedgeyosSessionId", "unknown"))
+        processes = record.get("processes", {})
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+        continue
+    stale_session = (
+        current_session != "unknown"
+        and record_session != "unknown"
+        and record_session != current_session
+    )
+    if exact_alive(leader_pid, leader_start) and not stale_session:
+        continue
+    for pid_text, identity in processes.items():
+        pid = int(pid_text)
+        if pid != leader_pid and exact_alive(pid, str(identity.get("start", ""))):
+            count += 1
+print(count)
+PY
+)
+printf 'orphaned_application_descendants=%s\n' "$orphaned_application_descendants"
+if [ "$orphaned_application_descendants" -eq 0 ]; then
+    if [ -r /home/hedgeyos/Logs/app-supervision-status.json ]; then
+        pass app-supervision "application supervision is active; no current orphans were measured"
+    else
+        pass app-supervision "ready; no supervised application has exited in this session"
+    fi
+else
+    fatal app-supervision \
+        "$orphaned_application_descendants recorded application descendants remain orphaned"
+fi
+if [ -r /home/hedgeyos/Logs/app-supervision-status.json ]; then
+    last_containment=$(python3 -c '
+import json
+import sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+print("%s,%s,%s" % (
+    data.get("app", "unknown"),
+    data.get("timestampUnix", "unknown"),
+    len(data.get("containedPids", [])),
+))
+' /home/hedgeyos/Logs/app-supervision-status.json 2>/dev/null || printf unreadable)
+else
+    last_containment=none
+fi
+printf 'last_application_containment_event=%s\n' "$last_containment"
+
+if [ -r /home/hedgeyos/Logs/xfce-session.log.legacy-repair.json ]; then
+    pass legacy-log-repair "oversized legacy session-log repair metadata is present"
+else
+    pass legacy-log-repair "no oversized legacy session log required repair"
+fi
+
+log_bytes=$(du -cb /home/hedgeyos/Logs/xfce-session.log* 2>/dev/null |
+    awk '/total$/ {print $1}' | tail -n 1)
+case "$log_bytes" in
+    ''|*[!0-9]*) log_bytes=0 ;;
+esac
+if [ "$log_bytes" -le 8388608 ]; then
+    pass desktop-log-budget "desktop session logs use ${log_bytes} bytes"
+else
+    fatal desktop-log-budget "desktop session logs exceed the 8 MiB contract: ${log_bytes} bytes"
+fi
+runtime_log_bytes=$(du -sb /home/hedgeyos/Logs 2>/dev/null |
+    awk 'NR == 1 {print $1}')
+case "$runtime_log_bytes" in
+    ''|*[!0-9]*) runtime_log_bytes=0 ;;
+esac
+if [ "$runtime_log_bytes" -le 16777216 ]; then
+    pass managed-log-budget "managed runtime logs use ${runtime_log_bytes} bytes"
+else
+    fatal managed-log-budget \
+        "managed runtime logs exceed the 16 MiB contract: ${runtime_log_bytes} bytes"
+fi
+suppressed_bytes=$(python3 -c '
+import json
+import sys
+print(json.load(open(sys.argv[1], encoding="utf-8")).get("suppressedBytes", 0))
+' /home/hedgeyos/Logs/.xfce-session.log.status.json 2>/dev/null || printf 0)
+printf 'runtime_logging=BOUNDED\n'
+printf 'runtime_log_usage_bytes=%s\n' "$runtime_log_bytes"
+printf 'runtime_log_budget_bytes=16777216\n'
+printf 'repeated_messages_suppressed_bytes=%s\n' "$suppressed_bytes"
+if [ -r /home/hedgeyos/Logs/xfce-session.log.legacy-repair.json ]; then
+    printf 'oversized_legacy_logs_repaired=YES\n'
+else
+    printf 'oversized_legacy_logs_repaired=NO\n'
+fi
+free_storage_bytes=$(df -Pk /home/hedgeyos/Logs 2>/dev/null |
+    awk 'NR == 2 {print $4 * 1024}')
+printf 'free_storage_bytes=%s\n' "${free_storage_bytes:-unknown}"
+
+proot_reproducer=/usr/local/libexec/hedgeyos-proot-seqpacket-reproducer
+proot_reproducer_dir=/run/hedgeyos/proot-seqpacket
+if [ -x "$proot_reproducer" ]; then
+    mkdir -p "$proot_reproducer_dir"
+    for mode in normal browser-abort browser-kill; do
+        result="$proot_reproducer_dir/$mode.txt"
+        if timeout 8 "$proot_reproducer" \
+            --mode "$mode" \
+            --output "$result"; then
+            reproducer_code=0
+        else
+            reproducer_code=$?
+        fi
+        if [ "$reproducer_code" -eq 0 ] &&
+            grep -Fq 'enosys_count=0' "$result" &&
+            grep -Fq 'recv_success=1' "$result" &&
+            grep -Fq 'eof=1' "$result"; then
+            pass "proot-recvmsg-$mode" "SOCK_SEQPACKET recvmsg lifecycle passed"
+        elif [ "$reproducer_code" -eq 38 ]; then
+            fatal "proot-recvmsg-$mode" "recvmsg returned ENOSYS under PRoot"
+        else
+            fatal "proot-recvmsg-$mode" "bounded reproducer failed with code $reproducer_code"
+        fi
+    done
+else
+    fatal proot-recvmsg "the ARM64 PRoot syscall reproducer is missing"
 fi
 
 gtk_loader=$(find /usr/lib -type f -path '*/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader_svg.so' -print -quit 2>/dev/null)

@@ -12,6 +12,7 @@ GTK_SMOKE="$ASSET_DIR/hedgeyos-gtk-asset-smoke"
 
 sh -n "$REPO_ROOT/rootfs/build-rootfs.sh"
 sh -n "$REPO_ROOT/rootfs/configure-rootfs.sh"
+sh -n "$REPO_ROOT/rootfs/finalize-rootfs.sh"
 sh -n "$REPO_ROOT/rootfs/verify-gtk-svg.sh"
 sh -n "$REPO_ROOT/rootfs/verify-migration-packages.sh"
 

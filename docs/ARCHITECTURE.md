@@ -35,8 +35,23 @@ Current repository state:
 - `HedgeyosGuestRuntime` owns one PRoot mount and environment contract for
   desktop, terminal, package, and migration commands. Its host-backed
   `/tmp`, `/run`, and `/dev/shm` tree is reset between desktop sessions.
-- `HedgeyosProcessOwner` records and validates exact same-UID desktop and X11
-  process identities. Stop and restart do not use broad process-name matching.
+- The foreground desktop chain is Android supervisor -> PRoot ->
+  `dbus-run-session` -> `hedgeyos-start-desktop` -> XFCE `xinitrc` ->
+  `xfce4-session`. The real XFCE session determines D-Bus lifetime.
+- `HedgeyosProcessOwner` records PID, process-start ticks, UID, command role,
+  and parent relationships for desktop and X11 identities. Stop and restart do
+  not use broad process-name matching.
+- `hedgeyos-session-guard` binds the exact XFCE and session-D-Bus identities.
+  Unexpected D-Bus death produces a fatal lifecycle record and terminates the
+  now-invalid XFCE session.
+- `hedgeyos-app-supervisor` launches Chromium and other opted-in multi-process
+  GUI applications in a dedicated process session, acts as a child subreaper,
+  and contains only exact recorded descendants after their leader exits.
+- Android and guest bounded-log components own persistent runtime output.
+  Desktop applications write through draining pipes, never directly to an
+  unlimited session-log descriptor. Rotation, repetition collapse, rate
+  limits, aggregate budgets, bounded-tail display, and legacy-log repair are
+  release contracts.
 - Normal builds and sessions remove the presence-sensitive
   `TERMUX_X11_DEBUG` variable. `HEDGEYOS_X11_DEBUG=1` is reserved for explicit
   diagnostic builds; the launcher also offers a warned, in-memory one-shot
@@ -47,6 +62,10 @@ Current repository state:
   X11 diagnostic logcat children.
 - Linux runtime preflight results are atomically exported to
   `linux-runtime-report.txt` and exposed through the hedgehog controls.
+- Runtime preflight runs from the active XFCE session after its D-Bus and
+  process identities exist. It verifies those identities, actual D-Bus
+  response, logging budgets, application supervision, GTK assets, shared
+  memory, X11, and the bounded ARM64 PRoot socket-lifecycle reproducer.
 - `HedgeyosX11Bridge` starts `com.termux.x11.CmdEntryPoint` through Android
   `app_process` with `CLASSPATH` pointed at the hedgeyos APK and `TMPDIR` pointed at
   hedgeyos's private shared tmp directory.
@@ -69,6 +88,10 @@ Current repository state:
 - Fresh rootfs builds include `librsvg2-common` and its exact Trixie
   dependencies. The build runs real GDK-Pixbuf decoding of a deterministic SVG,
   an Adwaita symbolic icon and check indicator, and an ordinary PNG.
+- Fresh rootfs builds also include the bounded logger, D-Bus session guard,
+  reusable GUI application supervisor, session initializer, Chromium wrapper,
+  and ARM64 PRoot socket-lifecycle reproducer through the declarative
+  customization manifest.
 - Versioned XFCE defaults identify the Applications plugin by its canonical
   `applicationsmenu` type, give it a compact hedgehog-only button, and enable
   native single-click desktop launchers.
@@ -86,6 +109,23 @@ Debian GUI application
   -> Android native Surface in HedgeyosHomeActivity
 ```
 
+Desktop lifecycle:
+
+```text
+HedgeyosRuntimeService
+  -> HedgeyosRuntimeManager
+    -> bundled PRoot --kill-on-exit
+      -> dbus-run-session
+        -> hedgeyos-start-desktop
+          -> exec /etc/xdg/xfce4/xinitrc
+            -> exec xfce4-session
+```
+
+The principal session is never backgrounded. Intentional shutdown stops
+recorded supervised applications before XFCE, D-Bus, PRoot, and X11.
+Unexpected principal-process exit is monitored and changes Android runtime
+state to `FAILED`.
+
 Device evidence:
 
 - On 2026-07-29, the `v0.1.0-alpha.2` test APK booted the bundled
@@ -96,8 +136,13 @@ Device evidence:
 
 Major remaining implementation boundaries:
 
-- Complete the remaining final-release evidence for in-app Reset Debian, true
-  clean first boot of the exact final artifact, and physical keyboard behavior.
+- Complete the remaining final-release evidence for in-app Reset Debian,
+  physical keyboard behavior, prolonged Chromium/Geany responsiveness, and
+  broader device coverage.
+- Continue isolating the historical Chromium orphan recvmsg `ENOSYS` trigger.
+  The bounded ARM64 reproducer passes under the published PRoot baseline and
+  current payload, so alpha.6 relies on generic exact-descendant containment
+  rather than claiming a low-level syscall fix.
 - Replace `com.termux.x11` package assumptions in loader, broadcasts, and native
   code where they conflict with hedgeyos package identity.
 - Replace `/data/data/com.termux` native path assumptions with hedgeyos paths where

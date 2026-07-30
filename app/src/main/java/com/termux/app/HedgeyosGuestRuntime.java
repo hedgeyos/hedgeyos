@@ -14,6 +14,7 @@ final class HedgeyosGuestRuntime {
     static final String GUEST_TMP = "/tmp";
     static final String GUEST_SHM = "/dev/shm";
     static final String GUEST_RUN = "/run";
+    static final String GUEST_PROCESS_DIR = "/run/hedgeyos-processes";
     static final String GUEST_RUNTIME_USER_PREFIX = "/run/user/";
     static final String RUNTIME_REPORT = "/home/hedgeyos/Logs/linux-runtime-report.txt";
     private static final DirectoryModeAccess ANDROID_MODE_ACCESS = new DirectoryModeAccess() {
@@ -107,6 +108,7 @@ final class HedgeyosGuestRuntime {
         command.add("--bind=" + layout.tmp.getAbsolutePath() + ":" + GUEST_TMP);
         command.add("--bind=" + layout.run.getAbsolutePath() + ":" + GUEST_RUN);
         command.add("--bind=" + layout.shm.getAbsolutePath() + ":/run/shm");
+        command.add("--bind=" + layout.processes.getAbsolutePath() + ":" + GUEST_PROCESS_DIR);
         command.add("--bind=" + exportDir.getAbsolutePath() + ":/home/hedgeyos/Downloads");
         command.add("--bind=" + publicLogDir.getAbsolutePath() + ":/home/hedgeyos/Logs");
         command.add("--cwd=" + home);

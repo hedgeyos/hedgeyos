@@ -1,0 +1,91 @@
+#!/usr/bin/python3
+"""Bind one XFCE session to its exact D-Bus daemon identity."""
+
+import argparse
+import json
+import os
+import signal
+import time
+from pathlib import Path
+
+
+def start_ticks(pid: int):
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text().split()
+        return stat[21] if stat[2] != "Z" else None
+    except (FileNotFoundError, IndexError, PermissionError):
+        return None
+
+
+def exact_process_alive(pid: int, ticks: str) -> bool:
+    return start_ticks(pid) == ticks
+
+
+def atomic_write(path: Path, data: dict) -> None:
+    temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    temporary.parent.mkdir(parents=True, exist_ok=True)
+    temporary.write_text(json.dumps(data, sort_keys=True) + "\n")
+    os.replace(temporary, path)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--xfce-pid", type=int, required=True)
+    parser.add_argument("--xfce-start-ticks", required=True)
+    parser.add_argument("--dbus-pid", type=int, required=True)
+    parser.add_argument("--dbus-start-ticks", required=True)
+    args = parser.parse_args()
+
+    state_path = Path(os.environ.get(
+        "HEDGEYOS_SESSION_GUARD_STATE",
+        "/run/hedgeyos/session-guard.json"))
+    containment_path = Path(os.environ.get(
+        "HEDGEYOS_CONTAINMENT_STATUS",
+        "/home/hedgeyos/Logs/session-containment.json"))
+    lifecycle_path = Path(os.environ.get(
+        "HEDGEYOS_LIFECYCLE_STATUS",
+        "/home/hedgeyos/Logs/desktop-lifecycle.json"))
+    shutdown_request = Path(os.environ.get(
+        "HEDGEYOS_SHUTDOWN_REQUEST",
+        "/run/hedgeyos/shutdown-requested"))
+    while exact_process_alive(args.xfce_pid, args.xfce_start_ticks):
+        if exact_process_alive(args.dbus_pid, args.dbus_start_ticks):
+            time.sleep(0.25)
+            continue
+
+        event = {
+            "classification": "FATAL",
+            "event": "session-dbus-exited-before-xfce",
+            "dbusPid": args.dbus_pid,
+            "xfcePid": args.xfce_pid,
+            "timestampUnix": int(time.time()),
+        }
+        atomic_write(state_path, event)
+        atomic_write(containment_path, event)
+        atomic_write(lifecycle_path, {
+            **event,
+            "state": "FAILED",
+            "shutdownRequested": shutdown_request.exists(),
+            "shutdownTimestampUnix": int(time.time()),
+        })
+        if exact_process_alive(args.xfce_pid, args.xfce_start_ticks):
+            os.kill(args.xfce_pid, signal.SIGTERM)
+        return 70
+
+    requested = shutdown_request.exists()
+    final_event = {
+        "classification": "PASS",
+        "event": "xfce-session-exited-requested" if requested else "xfce-session-exited",
+        "dbusPid": args.dbus_pid,
+        "xfcePid": args.xfce_pid,
+        "shutdownRequested": requested,
+        "shutdownTimestampUnix": int(time.time()),
+        "timestampUnix": int(time.time()),
+    }
+    atomic_write(state_path, final_event)
+    atomic_write(lifecycle_path, {**final_event, "state": "STOPPED"})
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

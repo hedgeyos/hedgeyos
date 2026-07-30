@@ -1,0 +1,22 @@
+#!/bin/sh
+set -u
+
+warning="Chromium's internal Linux process sandbox is unavailable inside this Android PRoot environment.
+
+HedgeyOS's Android app sandbox still isolates Debian from other Android apps, and HedgeyOS will supervise Chromium's process tree and bound its output. However, a compromised website could access files available to the Debian user.
+
+Cancel is the safe default. Continue launches this Chromium session without Chromium's internal sandbox."
+
+if ! xmessage \
+    -center \
+    -title "HedgeyOS Chromium compatibility warning" \
+    -buttons "Cancel:1,Continue:0" \
+    -default "Cancel" \
+    "$warning"; then
+    exit 0
+fi
+
+exec /usr/local/libexec/hedgeyos-app-supervisor \
+    --name chromium \
+    -- /usr/sbin/runuser -u hedgeyos -- \
+    /usr/bin/chromium --no-sandbox "$@"

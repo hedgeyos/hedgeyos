@@ -128,6 +128,20 @@ contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/migration-packages.t
     fail "APK does not contain the offline migration manifest"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-start-desktop" ||
     fail "APK does not contain Linux desktop startup helper"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-bounded-log" ||
+    fail "APK does not contain bounded Linux logger"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-session-guard" ||
+    fail "APK does not contain desktop session guard"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-app-supervisor" ||
+    fail "APK does not contain generic GUI app supervisor"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-launch-chromium" ||
+    fail "APK does not contain warned Chromium launcher"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-proot-seqpacket-reproducer" ||
+    fail "APK does not contain ARM64 PRoot recvmsg reproducer"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-session-init.desktop" ||
+    fail "APK does not contain XFCE session initializer"
+contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/chromium.desktop" ||
+    fail "APK does not contain supervised Chromium launcher"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-window-rules.desktop" ||
     fail "APK does not contain Linux window-rule autostart"
 contains "$OUT_DIR/apk-contents.txt" "assets/hedgeyos-linux/hedgeyos-window-rules.lua" ||
@@ -195,6 +209,10 @@ fi
     printf 'linux_gtk_asset_smoke=assets/hedgeyos-linux/hedgeyos-gtk-asset-smoke\n'
     printf 'linux_migration_manifest=assets/hedgeyos-linux/migration-packages.tsv\n'
     printf 'linux_desktop_startup=assets/hedgeyos-linux/hedgeyos-start-desktop\n'
+    printf 'linux_bounded_logger=assets/hedgeyos-linux/hedgeyos-bounded-log\n'
+    printf 'linux_app_supervisor=assets/hedgeyos-linux/hedgeyos-app-supervisor\n'
+    printf 'linux_chromium_launcher=assets/hedgeyos-linux/hedgeyos-launch-chromium\n'
+    printf 'proot_recvmsg_reproducer=assets/hedgeyos-linux/hedgeyos-proot-seqpacket-reproducer\n'
     printf 'vnc_files=absent_in_apk_listing\n'
 } > "$OUT_DIR/summary.properties"
 

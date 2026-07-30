@@ -55,6 +55,8 @@ public class HedgeyosGuestRuntimeTest {
         String sys = "--bind=/sys";
         String tmp = "--bind=" + layout.tmp.getAbsolutePath() + ":/tmp";
         String run = "--bind=" + layout.run.getAbsolutePath() + ":/run";
+        String processes = "--bind=" + layout.processes.getAbsolutePath() +
+            ":/run/hedgeyos-processes";
 
         Assert.assertEquals(1, Collections.frequency(command, dev));
         Assert.assertTrue(command.indexOf(dev) < command.indexOf(shm));
@@ -62,6 +64,7 @@ public class HedgeyosGuestRuntimeTest {
         Assert.assertTrue(command.indexOf(proc) < command.indexOf(sys));
         Assert.assertTrue(command.indexOf(sys) < command.indexOf(tmp));
         Assert.assertTrue(command.indexOf(tmp) < command.indexOf(run));
+        Assert.assertTrue(command.contains(processes));
         Assert.assertTrue(command.contains("--kill-on-exit"));
         Assert.assertTrue(command.contains("TMPDIR=/tmp"));
         Assert.assertTrue(command.contains("XDG_RUNTIME_DIR=/run/user/0"));

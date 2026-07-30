@@ -25,18 +25,18 @@ code changes so releases can be audited against the exact sources used.
 
 ## Debian Rootfs Pin
 
-The published `v0.1.0-alpha.1` prerelease bundles this Debian rootfs:
+The `v0.1.0-alpha.6` release candidate bundles this Debian rootfs:
 
 - Name: `debian-trixie-arm64-rootfs.tar.zst`
 - Debian release: 13 Trixie
 - Architecture: `arm64`
-- Build date: `2026-07-26T00:12:00Z`
+- Build date: `2026-07-30T03:30:24Z`
 - Primary source: `deb http://deb.debian.org/debian trixie main`
 - Updates source: `deb http://deb.debian.org/debian trixie-updates main`
 - Security source: `deb http://security.debian.org/debian-security trixie-security main`
 - SHA-256:
-  `5841fb1ad7706dbab40492d484ec817cb501203d9ea6e867ad1ebd29949b95c7`
-- Size: 221,480,599 bytes
+  `1f2c9e7c147ba7f432527bcba0714bd36b214d9884a177203897f38ccf951269`
+- Size: 223,061,221 bytes
 
 The full package manifest and Android-extractable archive notes are recorded in
 `rootfs/manifests/debian-trixie-arm64-rootfs.provenance`.
@@ -51,6 +51,6 @@ new payload versions.
 
 | Package | Version | Termux repository path | SHA-256 |
 | --- | --- | --- | --- |
-| `proot` | `5.1.107.87` | `pool/main/p/proot/proot_5.1.107.87_aarch64.deb` | `c978bbe7161a639349a2e369d3d134e35d234f5b846432182a5c9bffadb606a6` |
+| `proot` | `5.1.107.89` | `pool/main/p/proot/proot_5.1.107.89_aarch64.deb` | `ec9fe38c50cfd49dd31fe360ffbcc3124a945dc1ea16293a8a769303dd724f46` |
 | `libandroid-shmem` | `0.7` | `pool/main/liba/libandroid-shmem/libandroid-shmem_0.7_aarch64.deb` | `0da3a24d558b93c92bcf8d611e0826a99ff96e396b148e6cdf33b47c47c57ff6` |
 | `libtalloc` | `2.4.3` | `pool/main/libt/libtalloc/libtalloc_2.4.3_aarch64.deb` | `ac81ad623d74c209718b9f3acb2dd702cc8a88c431e820d212229910b4db29da` |

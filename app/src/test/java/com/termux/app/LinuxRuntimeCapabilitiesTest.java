@@ -17,12 +17,19 @@ public class LinuxRuntimeCapabilitiesTest {
                 "PASS|sysv-ipc|System V shared memory works\n" +
                 "WARNING|memfd|blocked by Android\n" +
                 "PASS|session-dbus|session bus works\n" +
+                "PASS|session-dbus-process|owned D-Bus process works\n" +
+                "PASS|xfce-session-process|owned XFCE process works\n" +
                 "WARNING|system-dbus|not provided under PRoot\n" +
                 "WARNING|inotify|UNSUPPORTED_BY_ANDROID_PROCFS\n" +
                 "PASS|x11|X1 is available\n" +
                 "PASS|gtk-svg-loader|loader is installed\n" +
                 "PASS|gtk-svg-cache|cache contains SVG\n" +
                 "PASS|gtk-svg-decode|decode passed\n" +
+                "PASS|app-supervision|ready\n" +
+                "PASS|managed-log-budget|bounded\n" +
+                "PASS|proot-recvmsg-normal|passed\n" +
+                "PASS|proot-recvmsg-browser-abort|passed\n" +
+                "PASS|proot-recvmsg-browser-kill|passed\n" +
                 "PASS|x11-diagnostic|OFF (NORMAL session)\n" +
                 "summary=PASS fatal=0\n");
 
@@ -36,17 +43,23 @@ public class LinuxRuntimeCapabilitiesTest {
         Assert.assertTrue(capabilities.sysvIpc);
         Assert.assertFalse(capabilities.memfd);
         Assert.assertTrue(capabilities.sessionDbus);
+        Assert.assertTrue(capabilities.sessionDbusProcess);
+        Assert.assertTrue(capabilities.xfceSessionProcess);
         Assert.assertFalse(capabilities.systemDbus);
         Assert.assertFalse(capabilities.procSysctlVisibility);
         Assert.assertTrue(capabilities.x11Socket);
         Assert.assertTrue(capabilities.gtkSvgLoader);
         Assert.assertTrue(capabilities.gtkSvgLoaderCache);
         Assert.assertTrue(capabilities.gtkSvgDecode);
+        Assert.assertTrue(capabilities.appSupervision);
+        Assert.assertTrue(capabilities.managedLogBudget);
+        Assert.assertTrue(capabilities.prootRecvmsg);
         Assert.assertEquals("NORMAL", capabilities.x11SessionMode);
         Assert.assertEquals(3, capabilities.warnings.size());
         Assert.assertTrue(capabilities.toDisplayText().contains("Overall: PASS"));
         Assert.assertTrue(capabilities.toDisplayText().contains("GTK SVG loader: PASS"));
         Assert.assertTrue(capabilities.toDisplayText().contains("GTK SVG decode: PASS"));
+        Assert.assertTrue(capabilities.toDisplayText().contains("PRoot recvmsg lifecycle: PASS"));
         Assert.assertTrue(capabilities.toDisplayText().contains("X11 diagnostic mode: OFF"));
     }
 

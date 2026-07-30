@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=HedgeyOS Session Initialization
+Comment=Apply HedgeyOS defaults and validate the active desktop session
+Exec=/usr/local/libexec/hedgeyos-session-init
+OnlyShowIn=XFCE;
+StartupNotify=false
+Terminal=false
+X-GNOME-Autostart-enabled=true

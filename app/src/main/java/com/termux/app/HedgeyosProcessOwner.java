@@ -21,7 +21,7 @@ final class HedgeyosProcessOwner {
             List<Integer> matching = findMatching(requiredCommandArguments);
             if (!matching.isEmpty()) {
                 int pid = Collections.max(matching);
-                HedgeyosAtomicFile.write(pidFile, Integer.toString(pid) + "\n");
+                record(pidFile, pid);
                 return pid;
             }
             try {
@@ -43,20 +43,12 @@ final class HedgeyosProcessOwner {
 
     static List<Integer> stopRecordedAndMatching(File pidFile, String... requiredCommandArguments) {
         List<Integer> stopped = new ArrayList<>();
-        int recordedPid = readPid(pidFile);
-        if (recordedPid > 0 && stopIfOwned(recordedPid, requiredCommandArguments)) {
-            stopped.add(recordedPid);
+        Identity identity = readIdentity(pidFile);
+        if (identity.pid > 0 &&
+            stopIfOwned(identity.pid, identity.startTicks, requiredCommandArguments)) {
+            stopped.add(identity.pid);
         }
         clear(pidFile);
-
-        for (int pid : findMatching(requiredCommandArguments)) {
-            if (pid == recordedPid || stopped.contains(pid)) {
-                continue;
-            }
-            if (stopIfOwned(pid, requiredCommandArguments)) {
-                stopped.add(pid);
-            }
-        }
         return stopped;
     }
 
@@ -74,11 +66,34 @@ final class HedgeyosProcessOwner {
             Integer.toString(parentPid));
     }
 
+    static boolean stopRecordedExact(File identityFile, String expectedComm) {
+        Identity identity = readIdentity(identityFile);
+        if (identity.pid <= 0 ||
+            !startIdentityMatches(identity.pid, identity.startTicks)) {
+            clear(identityFile);
+            return false;
+        }
+        String status = readText(new File("/proc/" + identity.pid + "/status"));
+        String comm = readText(new File("/proc/" + identity.pid + "/comm")).trim();
+        if (!statusHasUid(status, Os.getuid()) || !expectedComm.equals(comm)) {
+            clear(identityFile);
+            return false;
+        }
+        boolean stopped = stopProcess(identity.pid);
+        clear(identityFile);
+        return stopped;
+    }
+
     static boolean stopRecordedOwnedChild(File childPidFile, int parentPid,
                                           String... requiredCommandArguments) {
-        int childPid = readPid(childPidFile);
+        Identity childIdentity = readIdentity(childPidFile);
+        int childPid = childIdentity.pid;
         boolean stopped = childPid > 0 && parentPid > 0 &&
-            stopIfOwnedChild(childPid, parentPid, requiredCommandArguments);
+            stopIfOwnedChild(
+                childPid,
+                childIdentity.startTicks,
+                parentPid,
+                requiredCommandArguments);
         clear(childPidFile);
         return stopped;
     }
@@ -105,9 +120,13 @@ final class HedgeyosProcessOwner {
         return matching;
     }
 
-    private static boolean stopIfOwned(int pid, String... requiredCommandArguments) {
+    private static boolean stopIfOwned(int pid, String expectedStartTicks,
+                                       String... requiredCommandArguments) {
         List<String> commandArguments = readCommandArguments(pid);
         String status = readText(new File("/proc/" + pid + "/status"));
+        if (!startIdentityMatches(pid, expectedStartTicks)) {
+            return false;
+        }
         if (!matchesOwnedProcess(
             status, commandArguments, Os.getuid(), requiredCommandArguments)) {
             return false;
@@ -115,10 +134,14 @@ final class HedgeyosProcessOwner {
         return stopProcess(pid);
     }
 
-    private static boolean stopIfOwnedChild(int pid, int expectedParentPid,
+    private static boolean stopIfOwnedChild(int pid, String expectedStartTicks,
+                                            int expectedParentPid,
                                             String... requiredCommandArguments) {
         List<String> commandArguments = readCommandArguments(pid);
         String status = readText(new File("/proc/" + pid + "/status"));
+        if (!startIdentityMatches(pid, expectedStartTicks)) {
+            return false;
+        }
         if (!matchesOwnedChild(
             status,
             commandArguments,
@@ -230,8 +253,56 @@ final class HedgeyosProcessOwner {
     }
 
     static int readPid(File pidFile) {
+        return readIdentity(pidFile).pid;
+    }
+
+    private static void record(File pidFile, int pid) throws IOException {
+        String startTicks = readStartTicks(pid);
+        if (startTicks.isEmpty()) {
+            throw new IOException("Could not read process start identity for pid " + pid + ".");
+        }
+        String comm = readText(new File("/proc/" + pid + "/comm")).trim();
+        HedgeyosAtomicFile.write(
+            pidFile,
+            "pid=" + pid + "\n" +
+                "start_ticks=" + startTicks + "\n" +
+                "uid=" + Os.getuid() + "\n" +
+                "comm=" + comm + "\n");
+    }
+
+    private static Identity readIdentity(File pidFile) {
         String value = readText(pidFile).trim();
-        return parsePid(value);
+        if (value.isEmpty()) {
+            return Identity.NONE;
+        }
+        if (!value.contains("=")) {
+            return new Identity(parsePid(value), "");
+        }
+        int pid = -1;
+        String startTicks = "";
+        for (String line : value.split("\n")) {
+            if (line.startsWith("pid=")) {
+                pid = parsePid(line.substring(4));
+            } else if (line.startsWith("start_ticks=")) {
+                startTicks = line.substring("start_ticks=".length()).trim();
+            }
+        }
+        return new Identity(pid, startTicks);
+    }
+
+    private static boolean startIdentityMatches(int pid, String expectedStartTicks) {
+        return expectedStartTicks == null || expectedStartTicks.isEmpty() ||
+            expectedStartTicks.equals(readStartTicks(pid));
+    }
+
+    private static String readStartTicks(int pid) {
+        String stat = readText(new File("/proc/" + pid + "/stat")).trim();
+        int commandEnd = stat.lastIndexOf(')');
+        if (commandEnd < 0 || commandEnd + 2 >= stat.length()) {
+            return "";
+        }
+        String[] fieldsAfterCommand = stat.substring(commandEnd + 2).split("\\s+");
+        return fieldsAfterCommand.length > 19 ? fieldsAfterCommand[19] : "";
     }
 
     private static int parsePid(String value) {
@@ -254,6 +325,18 @@ final class HedgeyosProcessOwner {
             return new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
         } catch (IOException ignored) {
             return "";
+        }
+    }
+
+    private static final class Identity {
+        static final Identity NONE = new Identity(-1, "");
+
+        final int pid;
+        final String startTicks;
+
+        Identity(int pid, String startTicks) {
+            this.pid = pid;
+            this.startTicks = startTicks;
         }
     }
 

@@ -17,12 +17,17 @@ public final class LinuxRuntimeCapabilities {
     public final boolean sysvIpc;
     public final boolean memfd;
     public final boolean sessionDbus;
+    public final boolean sessionDbusProcess;
+    public final boolean xfceSessionProcess;
     public final boolean systemDbus;
     public final boolean procSysctlVisibility;
     public final boolean x11Socket;
     public final boolean gtkSvgLoader;
     public final boolean gtkSvgLoaderCache;
     public final boolean gtkSvgDecode;
+    public final boolean appSupervision;
+    public final boolean managedLogBudget;
+    public final boolean prootRecvmsg;
     public final String x11SessionMode;
     public final List<CompatibilityWarning> warnings;
 
@@ -37,12 +42,17 @@ public final class LinuxRuntimeCapabilities {
         sysvIpc = builder.sysvIpc;
         memfd = builder.memfd;
         sessionDbus = builder.sessionDbus;
+        sessionDbusProcess = builder.sessionDbusProcess;
+        xfceSessionProcess = builder.xfceSessionProcess;
         systemDbus = builder.systemDbus;
         procSysctlVisibility = builder.procSysctlVisibility;
         x11Socket = builder.x11Socket;
         gtkSvgLoader = builder.gtkSvgLoader;
         gtkSvgLoaderCache = builder.gtkSvgLoaderCache;
         gtkSvgDecode = builder.gtkSvgDecode;
+        appSupervision = builder.appSupervision;
+        managedLogBudget = builder.managedLogBudget;
+        prootRecvmsg = builder.prootRecvmsgChecks == 3 && builder.prootRecvmsg;
         x11SessionMode = builder.x11SessionMode;
         warnings = Collections.unmodifiableList(new ArrayList<>(builder.warnings));
     }
@@ -88,12 +98,17 @@ public final class LinuxRuntimeCapabilities {
         appendCapability(text, "System V IPC", sysvIpc);
         appendCapability(text, "memfd", memfd);
         appendCapability(text, "Session D-Bus", sessionDbus);
+        appendResult(text, "Owned session D-Bus process", sessionDbusProcess);
+        appendResult(text, "Owned XFCE session process", xfceSessionProcess);
         appendCapability(text, "System D-Bus", systemDbus);
         appendCapability(text, "Android procfs sysctls", procSysctlVisibility);
         appendCapability(text, "X11 socket", x11Socket);
         appendResult(text, "GTK SVG loader", gtkSvgLoader);
         appendResult(text, "GTK SVG loader cache", gtkSvgLoaderCache);
         appendResult(text, "GTK SVG decode", gtkSvgDecode);
+        appendResult(text, "GUI app supervision", appSupervision);
+        appendResult(text, "Managed log budget", managedLogBudget);
+        appendResult(text, "PRoot recvmsg lifecycle", prootRecvmsg);
         text.append("X11 diagnostic mode: ")
             .append("DIAGNOSTIC".equals(x11SessionMode)
                 ? "ON"
@@ -147,12 +162,18 @@ public final class LinuxRuntimeCapabilities {
         boolean sysvIpc;
         boolean memfd;
         boolean sessionDbus;
+        boolean sessionDbusProcess;
+        boolean xfceSessionProcess;
         boolean systemDbus;
         boolean procSysctlVisibility;
         boolean x11Socket;
         boolean gtkSvgLoader;
         boolean gtkSvgLoaderCache;
         boolean gtkSvgDecode;
+        boolean appSupervision;
+        boolean managedLogBudget;
+        boolean prootRecvmsg = true;
+        int prootRecvmsgChecks;
         String x11SessionMode = "UNKNOWN";
         final List<CompatibilityWarning> warnings = new ArrayList<>();
 
@@ -173,6 +194,10 @@ public final class LinuxRuntimeCapabilities {
                 memfd = available;
             } else if ("session-dbus".equals(name)) {
                 sessionDbus = available;
+            } else if ("session-dbus-process".equals(name)) {
+                sessionDbusProcess = available;
+            } else if ("xfce-session-process".equals(name)) {
+                xfceSessionProcess = available;
             } else if ("system-dbus".equals(name)) {
                 systemDbus = available;
             } else if ("inotify".equals(name)) {
@@ -185,6 +210,13 @@ public final class LinuxRuntimeCapabilities {
                 gtkSvgLoaderCache = available;
             } else if ("gtk-svg-decode".equals(name)) {
                 gtkSvgDecode = available;
+            } else if ("app-supervision".equals(name)) {
+                appSupervision = available;
+            } else if ("managed-log-budget".equals(name)) {
+                managedLogBudget = available;
+            } else if (name.startsWith("proot-recvmsg-")) {
+                prootRecvmsg &= available;
+                prootRecvmsgChecks++;
             } else if ("x11-diagnostic".equals(name)) {
                 if (message.startsWith("OFF")) {
                     x11SessionMode = "NORMAL";

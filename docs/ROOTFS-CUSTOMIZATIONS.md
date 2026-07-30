@@ -72,15 +72,34 @@ The generic Linux runtime also installs:
 
 - `/usr/local/libexec/hedgeyos-runtime-preflight`, which verifies temporary
   storage, shared memory, runtime directories, X11, session D-Bus, and visible
-  Android kernel facilities before XFCE starts.
+  Android kernel facilities from the active XFCE session.
 - `/usr/local/libexec/hedgeyos-gtk-asset-smoke`, which uses GDK-Pixbuf itself
   to decode SVG symbolic assets, a checked indicator, and PNG.
 - `/usr/local/libexec/hedgeyos-start-desktop`, which owns the reproducible XFCE
   and session D-Bus startup sequence.
+- `/usr/local/libexec/hedgeyos-bounded-log`, which drains desktop/application
+  output through fixed file, rotation, rate, repetition, and directory budgets.
+- `/usr/local/libexec/hedgeyos-session-guard`, which binds the exact D-Bus and
+  XFCE identities and contains unexpected bus death.
+- `/usr/local/libexec/hedgeyos-app-supervisor`, which launches recorded
+  multi-process GUI applications and terminates only exact surviving
+  descendants after leader exit.
+- `/etc/xdg/autostart/hedgeyos-session-init.desktop`, which applies versioned
+  XFCE defaults, recovers stale supervised records, and publishes
+  active-session runtime preflight results.
+- `/usr/local/share/applications/chromium.desktop`, which opts Chromium into
+  a warned launcher and the reusable application supervisor without modifying
+  Chromium itself.
+- `/usr/local/libexec/hedgeyos-launch-chromium`, which defaults to Cancel and
+  requires explicit consent before using Chromium's PRoot compatibility mode
+  without Chromium's internal process sandbox.
+- `/usr/local/libexec/hedgeyos-proot-seqpacket-reproducer`, the bounded ARM64
+  Unix socket/recvmsg lifecycle regression check.
 
-Both files are copied into existing rootfs installations during normal app
-startup. They do not require a Debian reset. The host-backed runtime layout and
-mount contract are documented in [`LINUX-RUNTIME.md`](LINUX-RUNTIME.md).
+These replaceable system files are copied into existing rootfs installations
+during normal app startup. They do not require a Debian reset. The host-backed
+runtime, logging, process, and mount contracts are documented in
+[`LINUX-RUNTIME.md`](LINUX-RUNTIME.md).
 
 ## Rebuild Procedure
 
@@ -92,15 +111,17 @@ acceptance surface that must move together.
 1. Change a source file under `rootfs/runtime-assets/hedgeyos-linux`.
 2. Add or update its row in `rootfs/customizations.tsv`.
 3. Update this document when behavior, packages, ownership, or modes change.
-4. Build the rootfs as root with `rootfs/build-rootfs.sh`.
+4. Build the rootfs in `rootfs/Containerfile`, or as root with
+   `rootfs/build-rootfs.sh`.
 5. Confirm the canonical runtime asset tree contains the manifest and exactly
    its version-matched offline migration packages.
 6. Inspect archive ownership, modes, package capabilities, and customization
    coverage.
 7. Package the generated rootfs and the same runtime assets into the Android
    APK.
-8. Run `scripts/test-linux-runtime.sh` and
-   `scripts/test-linux-migrations.sh`.
+8. Run `scripts/test-linux-runtime.sh`,
+   `scripts/test-linux-migrations.sh`, `scripts/test-runtime-containment.sh`,
+   and the PRoot reproducer/payload tests.
 9. Test both fresh extraction and migration of an existing installation,
    including the runtime report and `/dev/shm`.
 

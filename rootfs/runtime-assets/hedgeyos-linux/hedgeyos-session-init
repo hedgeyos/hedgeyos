@@ -1,0 +1,39 @@
+#!/bin/sh
+set -u
+
+sleep 3
+/usr/local/libexec/hedgeyos-app-supervisor --cleanup-stale || true
+printf '%s\n' "hedgeyos session init: applying versioned defaults"
+/usr/local/libexec/hedgeyos-apply-defaults || true
+
+wallpaper=/usr/share/backgrounds/hedgeyos/hedgeyos-wallpaper.png
+candidate_bases="/backdrop/screen0/monitor0/workspace0 /backdrop/screen0/monitorVirtual-1/workspace0 /backdrop/screen0/monitorDefault/workspace0"
+monitors="$(xrandr --listmonitors 2>/dev/null | tail -n +2 | while read -r _ _ _ name _; do printf '%s\n' "$name"; done)"
+for monitor in $monitors; do
+    candidate_bases="$candidate_bases /backdrop/screen0/monitor${monitor}/workspace0"
+done
+saved_bases="$(xfconf-query -c xfce4-desktop -l 2>/dev/null | while read -r property; do
+    case "$property" in
+        */last-image) printf '%s\n' "${property%/last-image}" ;;
+    esac
+done)"
+for base in $saved_bases $candidate_bases; do
+    xfconf-query -c xfce4-desktop -p "$base/color-style" -n -t int -s 0 || true
+    xfconf-query -c xfce4-desktop -p "$base/image-style" -n -t int -s 5 || true
+    xfconf-query -c xfce4-desktop -p "$base/last-image" -n -t string -s "$wallpaper" || true
+    xfconf-query -c xfce4-desktop -p "$base/last-single-image" -n -t string -s "$wallpaper" || true
+done
+xfdesktop --reload || true
+
+report=${HEDGEYOS_RUNTIME_REPORT:-/home/hedgeyos/Logs/linux-runtime-report.txt}
+temporary="${report}.tmp.$$"
+trap 'rm -f "$temporary"' EXIT INT TERM
+if /usr/local/libexec/hedgeyos-runtime-preflight > "$temporary" 2>&1; then
+    mv -f "$temporary" "$report"
+    printf '%s\n' "hedgeyos session init: runtime preflight passed"
+else
+    code=$?
+    mv -f "$temporary" "$report"
+    printf 'hedgeyos session init: runtime preflight failed with code %s\n' "$code"
+fi
+trap - EXIT INT TERM

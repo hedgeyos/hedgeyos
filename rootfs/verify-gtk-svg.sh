@@ -42,7 +42,14 @@ query_loader=$(find "$ROOTFS/usr/lib" -type f \
     fail "the architecture-specific gdk-pixbuf-query-loaders executable is missing"
 
 mkdir -p "$(dirname "$OUTPUT")"
-if ! chroot "$ROOTFS" /usr/local/libexec/hedgeyos-gtk-asset-smoke > "$OUTPUT" 2>&1; then
+if chroot "$ROOTFS" \
+    /usr/local/libexec/hedgeyos-gtk-asset-smoke > "$OUTPUT" 2>&1; then
+    smoke_status=0
+else
+    smoke_status=$?
+fi
+
+if [ "$smoke_status" -ne 0 ]; then
     cat "$OUTPUT" >&2
     fail "GDK-Pixbuf could not decode the deterministic GTK asset smoke set"
 fi

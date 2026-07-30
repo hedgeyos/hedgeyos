@@ -1,0 +1,16 @@
+FROM docker.io/library/debian:trixie
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        arch-test \
+        ca-certificates \
+        debian-archive-keyring \
+        dpkg-dev \
+        mmdebstrap \
+        qemu-user-static \
+        zstd \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /work
+ENTRYPOINT ["/work/rootfs/build-rootfs.sh"]

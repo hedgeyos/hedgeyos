@@ -1,43 +1,49 @@
 # Known Issues
 
-- `v0.1.0-alpha.4` is a published, test-signed prerelease. It is not the final
-  `v0.1.0` production release.
-- Alpha.4 permanently enables Termux:X11 diagnostic logcat capture because it
-  exports presence-sensitive `TERMUX_X11_DEBUG=1` in every session. The current
-  development branch removes it from normal environments and provides an
-  explicit one-shot diagnostic action; this fix is not yet a published release.
-- Alpha.4's Debian rootfs omits `librsvg2-common`, so GTK cannot load many SVG
-  symbolic assets. The current development branch adds the standard Trixie
-  loader and an offline existing-rootfs migration; extended visual confirmation
-  remains pending human testing.
-- The alpha boot/restart gate passes on the attached ARM64 phone: hedgeyos
-  installs, starts embedded X11, reaches XFCE with the panel/dock and `xfwm4`
-  running, applies the hedgeyos wallpaper, and recovers after app
-  force-stop/relaunch.
-- Remaining final-release evidence gaps are direct in-app Reset Debian,
-  physical-keyboard behavior, broader device coverage, and production signing.
-  Alpha.2 has exact-artifact proof for true clean first boot, APT package
-  installation, background protection, and process recovery.
-- Termux must not be removed from the test phone. hedgeyos independence should
-  be proven from APK contents, code paths, packages, and processes. Current
-  evidence shows hedgeyos uses its own package, bundled PRoot/rootfs, and
-  embedded X11; it does not require the installed Termux app, a separate
-  Termux:X11 APK, or VNC.
-- `third_party/termux-x11` is vendored as an optional module and still contains
-  upstream `com.termux.x11` namespace assumptions. The current hedgeyos build
-  works by embedding those classes inside the hedgeyos APK and starting
-  `CmdEntryPoint` with `CLASSPATH` pointed at hedgeyos's own `base.apk`.
-- Some native Termux:X11 code still has upstream path assumptions. Current
-  runtime overrides provide the working `TMPDIR` and `XKB_CONFIG_ROOT`, but this
-  area should remain part of release regression testing.
-- On-phone Gradle builds cannot execute official Android SDK/NDK Linux x86_64
-  host binaries. Use a Linux host or CI for X11-enabled release builds.
-- Host lint currently reports existing PendingIntent mutability warnings in
-  `TermuxService`. They are not blocking the current target SDK, but they should
-  be addressed before raising target SDK.
-- Gradle with JDK 21 emits Java 8 source/target deprecation warnings. The build
-  still completes with the current toolchain.
-- These two fixes do not establish that every GUI performance issue is solved.
-  Remaining contributors can include PRoot syscall interception, Termux:X11
-  rendering, software OpenGL, Android scheduler/cpuset behavior, excessive X11
-  resolution, application workloads, and system-wide Android RAM/swap pressure.
+- `v0.1.0-alpha.6` is a test-signed prerelease candidate, not the final
+  production-signed `v0.1.0`.
+- The historical Chromium failure is confirmed: its browser process lost the
+  session D-Bus, surviving zygotes looped on recvmsg `ENOSYS`, and the inherited
+  desktop log grew at roughly 33 MB/s to about 5.93 GB. Alpha.6 corrects the
+  fragile D-Bus/XFCE lifetime and contains descendant/output failure
+  generically.
+- The bounded ARM64 `SOCK_SEQPACKET` reproducer passes in Ubuntu, ARM64 QEMU,
+  native Android userspace, and the published HedgeyOS PRoot guest. The exact
+  Chromium-specific low-level condition that produced persistent ENOSYS has
+  not been reproduced. Do not describe the PRoot `5.1.107.89` refresh as a
+  proven syscall fix.
+- Chromium, Electron applications, IDEs, and other multi-process software may
+  still expose Android-kernel or PRoot compatibility limits. Applications must
+  opt into the generic HedgeyOS supervisor through their launcher to receive
+  instance-specific descendant containment.
+- Chromium's setuid and user-namespace sandboxes do not initialize under the
+  tested Android PRoot. The HedgeyOS launcher therefore warns on every launch,
+  defaults to Cancel, and requires explicit consent for a session using
+  `--no-sandbox`. Android app isolation and HedgeyOS process/output containment
+  remain active, but websites can access files available to the Debian user.
+- HedgeyOS log safety covers known runtime logs and supervised application
+  output. It intentionally does not truncate arbitrary user files or logs
+  created independently inside the Debian home directory.
+- A full system D-Bus is not provided under unprivileged PRoot. Session D-Bus
+  is supported and required. ConsoleKit, AT-SPI, DPMS, power-service, and
+  Android-hidden `/proc/sys` warnings are not automatically fatal.
+- Final-release evidence gaps include direct in-app Reset Debian,
+  physical-keyboard behavior, prolonged Chromium and Geany responsiveness,
+  broader device coverage, and production signing.
+- Termux must not be removed from the test phone. HedgeyOS independence is
+  established by its own Android package, bundled PRoot/rootfs, embedded X11,
+  and process paths. It does not require the separately installed Termux app,
+  a separate Termux:X11 APK, or VNC.
+- `third_party/termux-x11` retains upstream `com.termux.x11` namespace and
+  native path assumptions. The current embedded build works through HedgeyOS
+  runtime overrides, but these paths remain release regression surfaces.
+- X11-enabled builds require a conventional Linux host. Official Android
+  SDK/NDK host tools are Linux x86_64 binaries and cannot be executed by an
+  on-phone ARM64 Gradle build.
+- Host lint retains existing Termux `PendingIntent` mutability warnings, and
+  JDK 21 reports Java 8 source/target deprecation warnings.
+- Remaining performance contributors can include PRoot syscall interception,
+  Termux:X11 rendering, software OpenGL, Android scheduler or cpuset behavior,
+  excessive X11 resolution, application workloads, and system-wide Android
+  RAM/swap pressure. Alpha.6 does not claim that all GUI performance problems
+  are solved.

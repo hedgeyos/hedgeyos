@@ -1,0 +1,322 @@
+#!/usr/bin/python3
+"""Supervise one GUI application and contain exact surviving descendants."""
+
+import argparse
+import ctypes
+import json
+import os
+import shutil
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+PROCESS_DIR = Path(os.environ.get(
+    "HEDGEYOS_APP_PROCESS_DIR", "/run/hedgeyos-processes/apps"))
+LOG_DIR = Path(os.environ.get(
+    "HEDGEYOS_APP_LOG_DIR", "/home/hedgeyos/Logs/apps"))
+STATUS_PATH = Path(os.environ.get(
+    "HEDGEYOS_APP_STATUS_PATH",
+    "/home/hedgeyos/Logs/app-supervision-status.json"))
+BOUNDED_LOG = os.environ.get(
+    "HEDGEYOS_BOUNDED_LOG",
+    "/usr/local/libexec/hedgeyos-bounded-log")
+
+
+def process_snapshot():
+    result = {}
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            stat = (entry / "stat").read_text().split()
+            result[int(entry.name)] = {
+                "ppid": int(stat[3]),
+                "pgrp": int(stat[4]),
+                "session": int(stat[5]),
+                "start": stat[21],
+                "comm": (entry / "comm").read_text().strip(),
+            }
+        except (FileNotFoundError, IndexError, PermissionError, ValueError):
+            continue
+    return result
+
+
+def discover_descendants(root_pid, snapshot):
+    descendants = set()
+    changed = True
+    while changed:
+        changed = False
+        for pid, identity in snapshot.items():
+            if pid in descendants:
+                continue
+            if identity["ppid"] == root_pid or identity["ppid"] in descendants:
+                descendants.add(pid)
+                changed = True
+    return descendants
+
+
+def exact_alive(pid, start):
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text().split()
+        return stat[21] == start and stat[2] != "Z"
+    except (FileNotFoundError, IndexError, PermissionError):
+        return False
+
+
+def atomic_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    temporary.write_text(json.dumps(data, sort_keys=True) + "\n")
+    os.replace(temporary, path)
+
+
+def terminate_exact(records, sig):
+    signaled = []
+    for pid, identity in records.items():
+        if not exact_alive(pid, identity["start"]):
+            continue
+        try:
+            os.kill(pid, sig)
+            signaled.append(pid)
+        except ProcessLookupError:
+            pass
+    return signaled
+
+
+def enable_child_subreaper():
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(36, 1, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "PR_SET_CHILD_SUBREAPER failed")
+
+
+def reap_children():
+    while True:
+        try:
+            pid, _ = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            return
+        if pid <= 0:
+            return
+
+
+def capture_instance(records, snapshot, leader_pid, process_session_id,
+                     supervisor_pid, logger_pid):
+    candidates = discover_descendants(leader_pid, snapshot) | {leader_pid}
+    candidates.update(
+        pid for pid, identity in snapshot.items()
+        if identity["session"] == process_session_id
+        or (identity["ppid"] == supervisor_pid and pid != logger_pid)
+    )
+    for pid in candidates:
+        if pid in snapshot and pid != logger_pid:
+            records[pid] = {
+                "start": snapshot[pid]["start"],
+                "comm": snapshot[pid]["comm"],
+            }
+
+
+def cleanup_records(stale_only):
+    contained = []
+    current_session = os.environ.get("HEDGEYOS_SESSION_ID", "unknown")
+    PROCESS_DIR.mkdir(parents=True, exist_ok=True)
+    for identity_path in PROCESS_DIR.glob("*.json"):
+        try:
+            record = json.loads(identity_path.read_text())
+            leader_pid = int(record["leaderPid"])
+            leader_start = str(record["leaderStart"])
+            record_session = str(record.get("hedgeyosSessionId", "unknown"))
+            processes = {
+                int(pid): identity
+                for pid, identity in record.get("processes", {}).items()
+            }
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+            identity_path.unlink(missing_ok=True)
+            continue
+        same_or_unknown_session = (
+            current_session == "unknown"
+            or record_session == "unknown"
+            or record_session == current_session
+        )
+        if (stale_only and same_or_unknown_session
+                and exact_alive(leader_pid, leader_start)):
+            continue
+        terminated = terminate_exact(processes, signal.SIGTERM)
+        if terminated:
+            time.sleep(0.5)
+        killed = terminate_exact(processes, signal.SIGKILL)
+        contained.extend(terminated + killed)
+        identity_path.unlink(missing_ok=True)
+    if contained:
+        atomic_json(STATUS_PATH, {
+            "app": "stale-session-recovery",
+            "reason": "stale-session-recovery" if stale_only else "requested-session-shutdown",
+            "classification": "WARNING",
+            "containedPids": sorted(set(contained)),
+            "message": (
+                f"HedgeyOS contained {len(set(contained))} exact recorded "
+                "application process(es) from a previous or stopping session."
+            ),
+            "timestampUnix": int(time.time()),
+        })
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name")
+    parser.add_argument("--grace-seconds", type=float, default=1.5)
+    parser.add_argument("--cleanup-stale", action="store_true")
+    parser.add_argument("--shutdown-session", action="store_true")
+    parser.add_argument("command", nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    if args.cleanup_stale:
+        return cleanup_records(stale_only=True)
+    if args.shutdown_session:
+        return cleanup_records(stale_only=False)
+    if not args.name:
+        parser.error("--name is required when launching an application")
+    command = args.command[1:] if args.command[:1] == ["--"] else args.command
+    if not command:
+        parser.error("a command is required after --")
+
+    PROCESS_DIR.mkdir(parents=True, exist_ok=True)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    instance = f"{args.name}-{os.getpid()}-{int(time.time())}"
+    identity_path = PROCESS_DIR / f"{instance}.json"
+    log_path = LOG_DIR / f"{args.name}.log"
+    logger = subprocess.Popen(
+        [
+            BOUNDED_LOG,
+            "--name", f"app-{args.name}",
+            "--path", str(log_path),
+            "--max-bytes", "524288",
+            "--rotations", "2",
+            "--rate-bytes-per-second", "65536",
+        ],
+        stdin=subprocess.PIPE,
+    )
+    enable_child_subreaper()
+    child = subprocess.Popen(
+        command,
+        stdout=logger.stdin,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+        close_fds=True,
+    )
+    logger.stdin.close()
+
+    records = {}
+    leader_snapshot = process_snapshot().get(child.pid, {})
+    leader_start = leader_snapshot.get("start", "")
+    process_session_id = leader_snapshot.get("session", child.pid)
+    executable = shutil.which(command[0]) or command[0]
+    last_write = 0.0
+    while child.poll() is None:
+        snapshot = process_snapshot()
+        capture_instance(
+            records,
+            snapshot,
+            child.pid,
+            process_session_id,
+            os.getpid(),
+            logger.pid,
+        )
+        now = time.monotonic()
+        if now - last_write >= 0.5:
+            atomic_json(identity_path, {
+                "app": args.name,
+                "instance": instance,
+                "leaderPid": child.pid,
+                "leaderStart": leader_start,
+                "processGroupId": leader_snapshot.get("pgrp", child.pid),
+                "processSessionId": process_session_id,
+                "hedgeyosSessionId": os.environ.get(
+                    "HEDGEYOS_SESSION_ID", "unknown"),
+                "executable": executable,
+                "processes": records,
+                "state": "RUNNING",
+            })
+            last_write = now
+        time.sleep(0.1)
+
+    exit_code = child.wait()
+    deadline = time.monotonic() + args.grace_seconds
+    while time.monotonic() < deadline:
+        snapshot = process_snapshot()
+        capture_instance(
+            records,
+            snapshot,
+            child.pid,
+            process_session_id,
+            os.getpid(),
+            logger.pid,
+        )
+        survivors = {
+            pid: identity for pid, identity in records.items()
+            if pid != child.pid and exact_alive(pid, identity["start"])
+        }
+        if not survivors:
+            break
+        time.sleep(0.1)
+
+    survivors = {
+        pid: identity for pid, identity in records.items()
+        if pid != child.pid and exact_alive(pid, identity["start"])
+    }
+    terminated = terminate_exact(survivors, signal.SIGTERM)
+    if terminated:
+        deadline = time.monotonic() + 0.5
+        while time.monotonic() < deadline:
+            reap_children()
+            if not any(
+                    exact_alive(pid, identity["start"])
+                    for pid, identity in survivors.items()):
+                break
+            time.sleep(0.05)
+    forced_survivors = {
+        pid: identity for pid, identity in survivors.items()
+        if exact_alive(pid, identity["start"])
+    }
+    killed = terminate_exact(forced_survivors, signal.SIGKILL)
+    if killed:
+        time.sleep(0.05)
+        reap_children()
+
+    event = {
+        "app": args.name,
+        "instance": instance,
+        "leaderExitCode": exit_code,
+        "leaderPid": child.pid,
+        "leaderStart": leader_start,
+        "processGroupId": leader_snapshot.get("pgrp", child.pid),
+        "processSessionId": process_session_id,
+        "hedgeyosSessionId": os.environ.get(
+            "HEDGEYOS_SESSION_ID", "unknown"),
+        "executable": executable,
+        "gracefulDescendantPids": sorted(set(terminated) - set(killed)),
+        "forcedDescendantPids": sorted(set(killed)),
+        "containedPids": sorted(set(terminated + killed)),
+        "classification": "WARNING" if terminated or killed else "PASS",
+        "message": (
+            f"{args.name} leader exited with code {exit_code}; "
+            f"HedgeyOS contained {len(set(terminated + killed))} exact "
+            f"descendant process(es). Bounded output is in {log_path}."
+        ),
+        "timestampUnix": int(time.time()),
+    }
+    atomic_json(STATUS_PATH, event)
+    identity_path.unlink(missing_ok=True)
+    try:
+        logger.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        logger.terminate()
+        logger.wait(timeout=2)
+    reap_children()
+    return exit_code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

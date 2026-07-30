@@ -1,109 +1,125 @@
 # HedgeyOS
 
 <p align="center">
-  <img src="app/src/main/res/drawable-nodpi/hedgeyos_icon.png" width="160" alt="HedgeyOS hedgehog">
+  <img src="app/src/main/res/drawable-nodpi/hedgeyos_icon.png" width="176" alt="HedgeyOS hedgehog">
 </p>
 
-**A pocket Debian workstation that turns an ARM64 Android device into a
-storybook-inspired XFCE desktop.**
+<p align="center"><strong>Your pocket Debian desktop, ready wherever Android goes.</strong></p>
 
-HedgeyOS packages Debian 13, XFCE, an embedded X11 server, and its Android
-launcher into one app. Open it like an ordinary Android app or choose it as
-your Home screen, then use familiar Linux terminals, files, editors, browsers,
-APT packages, and development tools directly on your phone or tablet.
+HedgeyOS turns an ARM64 Android phone or tablet into a storybook-inspired Linux
+workstation. Debian 13, XFCE, an embedded X11 server, touch controls, and
+recovery tools arrive together in one app. There is no separate Termux,
+Termux:X11, VNC, or companion-app requirement.
 
-[Download HedgeyOS v0.1.0-alpha.5 for ARM64 Android](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.5/hedgeyos-arm64-v8a-alpha.5-test-signed.apk)
+<p align="center">
+  <a href="https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.6/hedgeyos-arm64-v8a-alpha.6-test-signed.apk"><strong>Download HedgeyOS alpha.6 for ARM64 Android</strong></a>
+</p>
 
-HedgeyOS is currently an alpha prerelease. The downloadable APK is test-signed
-for evaluation and is not yet a Play Store or production-signed release.
+HedgeyOS is currently an alpha prerelease. The APK is test-signed for evaluation
+and is not yet a Play Store or production-signed release.
 
-## Your Linux Desktop, Anywhere
+## A Real Desktop In Your Pocket
 
-- **One app, complete desktop.** Debian, PRoot, Termux:X11, XFCE, and the
-  HedgeyOS interface ship together. A separate Termux, Termux:X11, VNC, or
-  companion app is not required.
-- **Real Debian tools.** Use ordinary Trixie APT sources, install packages, run
-  Git, Python, compilers, editors, and other ARM64 Linux software.
-- **Built for touch.** Direct touch is the default, desktop launchers open with
-  one tap, primary apps open maximized, and portrait-safe window controls stay
-  reachable on narrow screens.
-- **Ready to stay running.** A foreground runtime, partial wake lock, and
-  guided vendor power-management setup help Android keep the desktop alive.
-- **A friendly desktop.** HedgeyOS combines an easy-to-read XFCE theme with its
-  hedgehog controls, wallpaper, compact app menu, and terminal-focused layout.
-- **Recovery within reach.** The draggable hedgehog opens controls for the
-  terminal, runtime report, logs, desktop restart, background setup, and Debian
-  recovery.
+- **Complete in one app.** Open HedgeyOS like any Android app or choose it as
+  your Home screen.
+- **Real Debian software.** Use APT, Git, Python, compilers, editors, browsers,
+  terminals, and other ARM64 Linux packages.
+- **Made for touch.** Direct touch is the default, desktop launchers open with
+  one tap, important apps open maximized, and window controls remain reachable
+  on portrait screens.
+- **Designed to keep running.** A foreground service, wake lock, and guided
+  battery-management setup help protect the desktop from aggressive Android
+  background policies.
+- **Friendly by design.** The HedgeyOS wallpaper, readable storybook theme,
+  compact application menu, terminal-focused desktop, and draggable hedgehog
+  make XFCE feel at home on a phone.
+- **Recovery is always close.** The hedgehog opens terminal, runtime, log,
+  restart, diagnostic, background-permission, and Debian recovery controls.
+- **Safer when software misbehaves.** Runtime logs are bounded and rate-limited,
+  oversized logs from older builds are repaired automatically, and supervised
+  applications cannot leave an uncontrolled process tree after their leader
+  exits.
 
-## What's New In Alpha.5
+## New In Alpha.6
 
-Alpha.5 improves Linux application compatibility and removes accidental X11
-diagnostic overhead from everyday sessions.
+Alpha.6 is a resilience and runtime-safety release built around a confirmed
+Chromium failure that produced gigabytes of repeated output.
 
-- GTK symbolic icons, checkmarks, menu indicators, and SVG controls now use
-  Debian's standard `librsvg2-common` GDK-Pixbuf loader.
-- Existing HedgeyOS installations receive the GTK repair through a verified,
-  offline, retryable migration without replacing the Debian rootfs.
-- Normal X11 sessions no longer start permanent live Android logcat children.
-- A clearly warned **Start X11 Diagnostic Session** action provides detailed
-  logs for one desktop session, then returns to normal automatically.
-- The Linux Runtime Report now verifies the SVG loader, loader cache, real SVG
-  decoding, and current X11 session mode before XFCE starts.
+- XFCE now runs as the foreground session beneath its private D-Bus, so the bus
+  lifetime follows the real desktop session.
+- Session, X11, migration, first-boot, and application logs have strict size
+  limits, rotation, output-rate control, and repetition summaries.
+- Existing multi-gigabyte HedgeyOS logs are repaired on upgrade while retaining
+  a small diagnostic tail and metadata. Debian files and installed packages are
+  preserved.
+- Chromium launches through a reusable application supervisor that records its
+  exact process instance and contains surviving descendants without broad
+  process-name killing.
+- Because Chromium's internal Linux sandbox cannot initialize inside Android
+  PRoot, its launcher shows a clear warning on every launch and defaults to
+  Cancel. Continuing runs Chromium inside Android's app sandbox with HedgeyOS
+  supervision, but without Chromium's additional internal process sandbox.
+- Desktop restart, force-stop recovery, and runtime reporting use exact process
+  identities with PID-reuse protection.
+- The bundled PRoot payload is now reproducibly pinned to `5.1.107.89`, and a
+  bounded ARM64 socket-lifecycle test checks normal, abort, and killed-parent
+  behavior at runtime.
+- Alpha.5's GTK SVG loader repair and normal-session X11 debug fix remain
+  included.
 
-These fixes address two confirmed defects. They do not claim to eliminate
-every source of GUI overhead under PRoot, Android scheduling, software
-rendering, or memory pressure.
+The original ENOSYS loop is safely contained, but its narrow low-level PRoot
+trigger was not reproduced by the bounded socket test. Alpha.6 does not claim
+that every source of Linux GUI overhead on Android is solved.
 
 ## Requirements
 
 - Android 8.0 or newer.
 - An ARM64 phone or tablet.
 - Permission to install an APK from outside the Play Store.
-- At least 1.5 GB of free space for extraction, plus room for your Debian
-  packages and files.
+- At least 1.5 GB of free space for extraction, plus room for Debian packages
+  and personal files.
 
 ## Install
 
-1. Download `hedgeyos-arm64-v8a-alpha.5-test-signed.apk` from the link above.
-2. Install the APK through Android's sideloading flow.
+1. Download `hedgeyos-arm64-v8a-alpha.6-test-signed.apk`.
+2. Install it through Android's APK sideloading flow.
 3. Open HedgeyOS.
-4. Follow the scrollable Background setup guide and allow unrestricted battery
-   use where your device offers it.
+4. Follow the Background setup guide and allow unrestricted battery use where
+   your device offers it.
 5. Wait while HedgeyOS verifies and extracts Debian on first launch.
 6. Choose HedgeyOS as the Android Home app when prompted if you want the Linux
    desktop to become your launcher.
 
-First boot takes longer because the bundled Debian filesystem is being
-verified and extracted. Later launches reuse the installed rootfs.
+First boot takes longer because the bundled Debian filesystem is verified and
+extracted. Later launches reuse the installed system. Updating the APK keeps the
+existing Debian rootfs, home directory, installed packages, and files.
 
-## Desktop Controls
+## Everyday Controls
 
 The always-visible, draggable hedgehog opens a compact control window with:
 
 - Background survival setup.
-- Open Debian Terminal.
-- Run Debian APT Check.
+- Debian Terminal.
+- APT check.
 - Linux Runtime Report.
-- Open HedgeyOS logs.
+- Bounded runtime logs.
 - Restart Desktop.
-- Start X11 Diagnostic Session.
+- One-session X11 diagnostics.
 - Stop Desktop.
 - Reset Debian.
-- Android keyboard, apps, settings, display, and Home-app controls.
+- Android keyboard, apps, settings, display, and Home controls.
 
-The hedgehog remains on-screen through rotation and remembers its position.
-The extra-key bar keeps common terminal keys and the Android keyboard button
-within thumb reach.
+The hedgehog remains visible through rotation and remembers its position. The
+extra-key bar keeps common terminal keys and the Android keyboard button within
+thumb reach.
 
 ## Screenshots
 
-![HedgeyOS alpha.5 themed XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.5/hedgeyos-alpha.5-desktop.png)
+![HedgeyOS alpha.6 XFCE desktop](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.6/hedgeyos-alpha.6-desktop.png)
 
-![HedgeyOS alpha.5 terminal](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.5/hedgeyos-alpha.5-terminal.png)
+![HedgeyOS alpha.6 terminal](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.6/hedgeyos-alpha.6-terminal.png)
 
 ![HedgeyOS first launch](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-first-load.gif)
-
-![HedgeyOS desktop demo](https://github.com/hedgeyos/hedgeyos/releases/download/v0.1.0-alpha.1/hedgeyos-desktop-demo.gif)
 
 Older alpha.1 captures show the pre-rename `panix@localhost` prompt. Current
 builds use HedgeyOS branding and open Debian desktop terminals through PRoot
@@ -113,8 +129,8 @@ fake-root as `root@localhost`.
 
 HedgeyOS runs Debian 13 Trixie under unprivileged PRoot. Debian's fake-root
 identity lets APT manage packages inside the guest without granting root access
-to Android itself. Files exported by HedgeyOS appear in the Debian user's
-Downloads and Logs directories.
+to Android. HedgeyOS exports its Downloads and Logs directories into the Debian
+home directory.
 
 This is a compatibility layer, not a virtual machine with its own kernel.
 Software that requires privileged kernel features, a full system D-Bus, or
@@ -125,50 +141,63 @@ endorsed by, or released by the Termux project.
 
 ## Technical Details
 
-### Release Status And Integrity
+### Release Status
 
-`v0.1.0-alpha.5` is an ARM64 test build:
+`v0.1.0-alpha.6` is an ARM64, test-signed prerelease:
 
-- APK size: 267,281,395 bytes.
+- Package: `org.hedgeyos`
+- Version code: `6`
+- Minimum Android API: `26`
+- Debian: `13 (Trixie), arm64`
+- PRoot: `5.1.107.89`
+- APK size: `266,430,161` bytes
 - APK SHA-256:
-  `76eb866c89e5efcbf7d65e2f312fa237b5db2d50c08c8b307cf872bcd627a298`.
+  `2d6e514b54aca757f12573b2eda79f73ff69e77f27c3159dfce1eceff61152bf`
+- Bundled Debian rootfs size: `223,067,304` bytes
+- Bundled Debian rootfs SHA-256:
+  `604b955f697358374e25f88adfa50390137731b6adfcdc4e8f750e09a6d91ba7`
 - Test signing certificate SHA-256:
-  `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`.
-- Bundled rootfs size: 223,940,166 bytes.
-- Bundled rootfs SHA-256:
-  `c9858719da4ddc64e3aa74a55b21acff9eb1cf80ce6a8a9562570a3d4162dbbc`.
-- Package name: `org.hedgeyos`.
-- Minimum Android API: 26.
+  `b6da01480eefd5fbf2cd3771b8d1021ec791304bdd6c4bf41d3faabad48ee5e1`
 
-The final production-signed `v0.1.0` has not been declared. Subjective Geany
-and Chromium responsiveness testing, broader device coverage, and production
-signing remain release work. Objective build and device evidence is recorded
-in [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md).
+The checksum file is published beside the APK and the complete objective test
+record is in [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md). The final
+production-signed `v0.1.0` has not been declared. Prolonged Chromium and Geany
+responsiveness, physical-keyboard behavior, broader device coverage, and
+production signing remain release work.
 
 ### Runtime Architecture
 
-The APK embeds Termux:X11 and an ARM64 Debian rootfs. Android starts the X11
-server, then launches Debian through a common PRoot command builder with
-host-backed `/tmp`, `/run`, and `/dev/shm`. XFCE runs under a private session
-D-Bus. Runtime preflight verifies shared memory, X11, D-Bus, GTK SVG support,
-and other packaged desktop contracts before startup.
+The APK embeds Termux:X11, a checksum-pinned PRoot payload, and an ARM64 Debian
+rootfs. Android starts X11 and then a direct PRoot -> `dbus-run-session` ->
+XFCE foreground chain. Host-backed `/tmp`, `/run`, and `/dev/shm` provide the
+expected Linux session facilities.
 
-Existing-rootfs repairs are versioned in
-`rootfs/runtime-assets/hedgeyos-linux/migration-packages.tsv`. Every bundled
-package is matched by name, version, architecture, filename, and SHA-256.
-Migration markers are written only after package configuration and capability
-checks pass.
+Runtime preflight verifies X11, D-Bus, process identity, shared memory, GTK SVG
+support, bounded logging, supervised-application state, and three bounded
+PRoot socket-lifecycle cases. Existing-rootfs package repairs are offline,
+manifest-driven, checksum-verified, versioned, and retryable.
 
-### Build
+The new log architecture uses bounded pipes rather than giving arbitrary
+desktop applications a direct append descriptor to a persistent file. Process
+cleanup uses recorded PID, start time, executable identity, process group,
+session, and ownership data. It never uses `pkill` or `killall`.
+
+Chromium's launcher does not silently add `--no-sandbox`. A separate warned
+helper requires explicit per-launch consent, defaults to Cancel, drops to the
+Debian `hedgeyos` user, and then starts Chromium through the generic supervisor.
+This is a disclosed PRoot compatibility boundary, not the fix for the
+historical runaway failure.
+
+### Build And Verification
 
 ```sh
 ./scripts/build-hedgeyos.sh
 ```
 
-See [`docs/BUILDING.md`](docs/BUILDING.md) for the Android toolchain and
-[`docs/DEBIAN-REBUILD.md`](docs/DEBIAN-REBUILD.md) for reproducible rootfs
-construction, package migration closure, ownership checks, and GTK asset
-verification.
+See [`docs/BUILDING.md`](docs/BUILDING.md) for the Android toolchain,
+[`docs/DEBIAN-REBUILD.md`](docs/DEBIAN-REBUILD.md) for clean rootfs
+construction, and [`docs/LINUX-RUNTIME.md`](docs/LINUX-RUNTIME.md) for session,
+logging, supervision, and runtime contracts.
 
 ### Maintainer And Agent Documentation
 
@@ -187,6 +216,6 @@ verification.
 
 ### License
 
-HedgeyOS is GPL-compatible and retains the required upstream Termux and
-Termux:X11 notices. Complete corresponding source must remain available for
-every distributed APK.
+HedgeyOS is GPL-compatible and retains the required upstream Termux,
+Termux:X11, and PRoot notices. Complete corresponding source must remain
+available for every distributed APK.

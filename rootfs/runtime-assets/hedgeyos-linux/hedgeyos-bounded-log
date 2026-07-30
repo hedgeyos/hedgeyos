@@ -1,0 +1,298 @@
+#!/usr/bin/python3
+"""Bounded, rate-limited logging for HedgeyOS-managed runtime streams."""
+
+import argparse
+import fcntl
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+
+def atomic_write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    temporary.write_text(text, encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def rotate(path: Path, rotations: int) -> None:
+    if rotations <= 0:
+        path.unlink(missing_ok=True)
+        return
+    oldest = path.with_name(f"{path.name}.{rotations}")
+    oldest.unlink(missing_ok=True)
+    for index in range(rotations - 1, 0, -1):
+        source = path.with_name(f"{path.name}.{index}")
+        if source.exists():
+            os.replace(source, path.with_name(f"{path.name}.{index + 1}"))
+    if path.exists():
+        os.replace(path, path.with_name(f"{path.name}.1"))
+
+
+def repair_legacy(path: Path, max_bytes: int, rotations: int, threshold: int) -> int:
+    if not path.is_file():
+        return 0
+    original_size = path.stat().st_size
+    original_modified_ns = path.stat().st_mtime_ns
+    if original_size <= threshold:
+        return 0
+
+    header = (
+        "[HedgeyOS repaired an oversized legacy managed log]\n"
+        f"original_bytes={original_size}\n"
+        "--- preserved tail ---\n"
+    ).encode("utf-8")
+    keep_bytes = min(max_bytes - len(header), original_size)
+    with path.open("rb") as source:
+        source.seek(-keep_bytes, os.SEEK_END)
+        tail = source.read(keep_bytes)
+
+    for index in range(1, rotations + 1):
+        path.with_name(f"{path.name}.{index}").unlink(missing_ok=True)
+    repaired = path.with_name(f".{path.name}.repair.{os.getpid()}")
+    with repaired.open("wb") as output:
+        output.write(header)
+        output.write(tail)
+    os.replace(repaired, path)
+
+    metadata = {
+        "path": str(path),
+        "originalBytes": original_size,
+        "originalModifiedUnixNs": original_modified_ns,
+        "preservedBytes": len(tail),
+        "repairedAtUnix": int(time.time()),
+    }
+    atomic_write(path.with_name(f"{path.name}.legacy-repair.json"),
+                 json.dumps(metadata, sort_keys=True) + "\n")
+    return original_size
+
+
+class BoundedWriter:
+    def __init__(self, args: argparse.Namespace) -> None:
+        self.path = args.path
+        self.name = args.name
+        self.max_bytes = args.max_bytes
+        self.rotations = args.rotations
+        self.rate = args.rate_bytes_per_second
+        self.status = args.status or self.path.with_name(
+            f".{self.path.name}.status.json")
+        self.window_start = time.monotonic()
+        self.window_bytes = 0
+        self.suppressed_bytes = 0
+        self.suppressed_lines = 0
+        self.suppressed_bytes_total = 0
+        self.suppressed_lines_total = 0
+        self.duplicate_suppressed_total = 0
+        self.duplicate_count = 0
+        self.previous_line = None
+        self.global_budget = args.global_budget_bytes
+        self.global_root = args.global_root or (
+            self.path.parent.parent
+            if self.path.parent.name == "apps"
+            else self.path.parent
+        )
+        self.budget_reserve = min(
+            65536, max(4096, self.global_budget // 16))
+        self.budget_lock_path = (
+            self.global_root / ".hedgeyos-log-budget.lock")
+        self.last_budget_check = 0.0
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.global_root.mkdir(parents=True, exist_ok=True)
+        self.output = self.path.open("ab", buffering=0)
+        self.budget_lock = self.budget_lock_path.open("a+b")
+        self.acquire_budget_lock()
+        try:
+            self.write_budget_total(self.enforce_global_budget())
+        finally:
+            self.release_budget_lock()
+
+    def close(self) -> None:
+        self.flush_duplicate_summary()
+        self.write_status()
+        self.output.close()
+        self.acquire_budget_lock()
+        try:
+            self.write_budget_total(self.enforce_global_budget())
+        finally:
+            self.release_budget_lock()
+            self.budget_lock.close()
+
+    def flush_duplicate_summary(self) -> None:
+        if self.duplicate_count:
+            count = max(0, self.duplicate_count - 4)
+            self.duplicate_count = 0
+            if count:
+                self.emit(
+                    f"[HedgeyOS collapsed {count} repeated log lines]\n".encode(),
+                    bypass_duplicate=True,
+                )
+
+    def write_status(self) -> None:
+        data = {
+            "name": self.name,
+            "path": str(self.path),
+            "currentBytes": self.path.stat().st_size if self.path.exists() else 0,
+            "maxBytes": self.max_bytes,
+            "rotations": self.rotations,
+            "rateBytesPerSecond": self.rate,
+            "suppressedBytes": self.suppressed_bytes_total,
+            "suppressedLines": self.suppressed_lines_total,
+            "duplicateLinesSuppressed": self.duplicate_suppressed_total,
+            "updatedAtUnix": int(time.time()),
+        }
+        atomic_write(self.status, json.dumps(data, sort_keys=True) + "\n")
+
+    def prepare_window(self) -> None:
+        now = time.monotonic()
+        if now - self.window_start < 1.0:
+            return
+        if self.suppressed_bytes:
+            summary = (
+                "[HedgeyOS log rate limit: "
+                f"suppressed_bytes={self.suppressed_bytes} "
+                f"suppressed_lines={self.suppressed_lines}]\n"
+            ).encode()
+            self.suppressed_bytes = 0
+            self.suppressed_lines = 0
+            self.window_start = now
+            self.window_bytes = 0
+            self.emit(summary, bypass_duplicate=True)
+        self.window_start = now
+        self.window_bytes = 0
+
+    def emit(self, data: bytes, bypass_duplicate: bool = False) -> None:
+        self.prepare_window()
+        if not bypass_duplicate and data == self.previous_line:
+            self.duplicate_count += 1
+            if self.duplicate_count > 4:
+                self.duplicate_suppressed_total += 1
+                return
+        elif not bypass_duplicate:
+            self.flush_duplicate_summary()
+            self.previous_line = data
+
+        if self.window_bytes + len(data) > self.rate:
+            self.suppressed_bytes += len(data)
+            self.suppressed_lines += 1
+            self.suppressed_bytes_total += len(data)
+            self.suppressed_lines_total += 1
+            return
+
+        self.acquire_budget_lock()
+        try:
+            if self.output.tell() + len(data) > self.max_bytes:
+                self.output.close()
+                rotate(self.path, self.rotations)
+                self.output = self.path.open("ab", buffering=0)
+                total = self.enforce_global_budget()
+            elif time.monotonic() - self.last_budget_check >= 1.0:
+                total = self.enforce_global_budget()
+            else:
+                total = self.read_budget_total()
+            if total + len(data) > self.global_budget - self.budget_reserve:
+                self.suppressed_bytes += len(data)
+                self.suppressed_lines += 1
+                self.suppressed_bytes_total += len(data)
+                self.suppressed_lines_total += 1
+                return
+            self.output.write(data)
+            self.write_budget_total(total + len(data))
+        finally:
+            self.release_budget_lock()
+        self.window_bytes += len(data)
+
+    def enforce_global_budget(self) -> int:
+        self.last_budget_check = time.monotonic()
+        files = [candidate for candidate in self.global_root.rglob("*")
+                 if candidate.is_file()
+                 and candidate != self.budget_lock_path]
+        total = sum(candidate.stat().st_size for candidate in files)
+        rotations = sorted(
+            (
+                candidate for candidate in files
+                if candidate.name.rsplit(".", 1)[-1].isdigit()
+                and ".log." in candidate.name
+            ),
+            key=lambda candidate: candidate.stat().st_mtime_ns,
+        )
+        for candidate in rotations:
+            if total <= self.global_budget - self.budget_reserve:
+                break
+            size = candidate.stat().st_size
+            candidate.unlink(missing_ok=True)
+            total -= size
+        return total
+
+    def acquire_budget_lock(self) -> None:
+        try:
+            fcntl.flock(self.budget_lock.fileno(), fcntl.LOCK_EX)
+        except OSError:
+            pass
+
+    def release_budget_lock(self) -> None:
+        try:
+            fcntl.flock(self.budget_lock.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            pass
+
+    def read_budget_total(self) -> int:
+        try:
+            self.budget_lock.seek(0)
+            return int(self.budget_lock.read().decode("ascii").strip())
+        except (OSError, UnicodeDecodeError, ValueError):
+            total = self.enforce_global_budget()
+            self.write_budget_total(total)
+            return total
+
+    def write_budget_total(self, total: int) -> None:
+        self.budget_lock.seek(0)
+        self.budget_lock.truncate()
+        self.budget_lock.write(f"{total}\n".encode("ascii"))
+        self.budget_lock.flush()
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name", default="managed-log")
+    parser.add_argument("--path", type=Path, required=True)
+    parser.add_argument("--max-bytes", type=int, default=1048576)
+    parser.add_argument("--rotations", type=int, default=3)
+    parser.add_argument("--rate-bytes-per-second", type=int, default=131072)
+    parser.add_argument("--status", type=Path)
+    parser.add_argument("--repair", action="store_true")
+    parser.add_argument("--legacy-threshold", type=int, default=8388608)
+    parser.add_argument("--global-budget-bytes", type=int, default=16777216)
+    parser.add_argument("--global-root", type=Path)
+    args = parser.parse_args()
+    if (args.max_bytes < 4096 or args.rotations < 0 or
+            args.rate_bytes_per_second < 1024 or
+            args.global_budget_bytes < args.max_bytes):
+        parser.error("invalid log bounds")
+    return args
+
+
+def main() -> int:
+    args = parse_args()
+    repaired = repair_legacy(
+        args.path, args.max_bytes, args.rotations, args.legacy_threshold)
+    if args.repair:
+        if repaired:
+            print(f"repaired legacy log original_bytes={repaired}")
+        return 0
+
+    writer = BoundedWriter(args)
+    try:
+        while True:
+            line = sys.stdin.buffer.readline(65536)
+            if not line:
+                break
+            writer.emit(line)
+    finally:
+        writer.close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

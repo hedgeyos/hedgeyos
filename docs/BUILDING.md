@@ -10,6 +10,14 @@ The intended top-level build command is:
 ./scripts/build-hedgeyos.sh
 ```
 
+The current alpha.6 Android version is `0.1.0-alpha.6` / version code `6`.
+The repository-pinned Termux PRoot payload is `5.1.107.89`. Verify its actual
+embedded binary identity and checksum with:
+
+```sh
+./scripts/test-proot-payload.sh
+```
+
 For CI builds without the private release key:
 
 ```sh
@@ -41,6 +49,8 @@ The script currently verifies:
   Android first boot can verify the asset.
 - The repository-pinned Termux PRoot payload and adjacent SHA-256 checksum.
 - Android first boot verifies that checksum before extracting the payload.
+- The ARM64 bounded PRoot socket-lifecycle reproducer and its guest runtime
+  asset.
 - The expected release APK filename, `hedgeyos-arm64-v8a.apk`.
 
 Current local blocker:
@@ -52,6 +62,10 @@ Current local blocker:
   is rolling and removes old package URLs. Explicit maintainers can refresh it
   from current verified packages with
   `HEDGEYOS_REBUILD_PROOT_PAYLOAD=1 ./scripts/build-hedgeyos.sh`.
+- A clean Debian rootfs can be built with `rootfs/Containerfile`; see
+  [`DEBIAN-REBUILD.md`](DEBIAN-REBUILD.md). `rootfs/finalize-rootfs.sh` owns
+  customization, package, ownership, GTK, migration, archive, and inspection
+  gates.
 - Official SDK/NDK host tools are Linux x86_64, so hedgeyos's on-phone build path
   generates ARM64 JNI libraries with Termux `clang`/`clang++` and packages them
   from `jniLibs`. Conventional CI hosts can opt back into upstream `ndk-build`
@@ -103,6 +117,13 @@ GitHub Actions workflow:
 - Focused runtime unit tests also verify applied directory modes, stale
   ephemeral-state cleanup, atomic state replacement, parsed capabilities,
   guest-UID-specific `XDG_RUNTIME_DIR`, and exact same-UID process targeting.
+- Runtime-containment tests cover foreground XFCE/D-Bus structure, bounded
+  draining logs, repetition suppression, sparse legacy repair, exact
+  descendant cleanup, stale-session recovery, and unrelated-process
+  preservation.
+- PRoot regression tests cover native and emulated ARM64
+  `SOCK_SEQPACKET`/`recvmsg` close, abort, and killed-parent lifecycles with
+  finite timeouts.
 - It uploads a small `hedgeyos-apk-inspection` artifact separately from the large
   APK artifact.
 - It uploads the APK, SHA-256 file, rootfs manifests, build logs, and inspection
