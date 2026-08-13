@@ -94,6 +94,52 @@ First boot takes longer because the bundled Debian filesystem is verified and
 extracted. Later launches reuse the installed system. Updating the APK keeps the
 existing Debian rootfs, home directory, installed packages, and files.
 
+## Planned: Android Child-Process Setup
+
+This is a planned feature, not functionality in the current alpha APK.
+
+Android 12 and newer separately monitor native child processes started by an
+app. AOSP defaults `max_phantom_processes` to 32 and may send `SIGKILL` when a
+Termux-style Linux environment crosses that ceiling. Unrestricted battery use,
+background-activity permission, foreground services, wake locks, and locking an
+app in Recents do not raise this separate limit. HedgeyOS can legitimately need
+more headroom for PRoot, X11, XFCE, terminals, and desktop applications.
+
+Implement an explicit, rootless setup flow that:
+
+1. Explains the tradeoff and requires user consent before changing a system
+   setting.
+2. Guides the user through Android Wireless debugging and local ADB pairing;
+   pairing codes and ports are short-lived and must not be stored.
+3. Reads and displays both the configured and effective phantom-process limits.
+4. Sets `activity_manager/max_phantom_processes` to the conservative value
+   `128`, then verifies that Android adopted `max_phantom_processes=128`.
+5. Records the previous value so the user can restore it exactly. If the prior
+   value was unset, rollback must delete the override instead of writing `32`.
+6. Never disables DeviceConfig synchronization and never requires root, a
+   computer, Shizuku, or another permanent companion app.
+7. Detects and clearly reports pairing expiry, unsupported OEM behavior, and a
+   value reset after reboot or a system configuration refresh.
+8. Remains optional: HedgeyOS must continue to start without this setup and
+   should reduce its own idle process count regardless of the configured limit.
+
+The intended ADB operation is:
+
+```sh
+adb shell device_config put activity_manager max_phantom_processes 128
+adb shell dumpsys activity settings | grep max_phantom_processes
+```
+
+When no earlier override existed, the corresponding rollback is:
+
+```sh
+adb shell device_config delete activity_manager max_phantom_processes
+```
+
+AOSP defines the default ceiling and dynamically reloads the DeviceConfig value
+in
+[`ActivityManagerConstants`](https://android.googlesource.com/platform/frameworks/base/+/master/services/core/java/com/android/server/am/ActivityManagerConstants.java).
+
 ## Everyday Controls
 
 The always-visible, draggable hedgehog opens a compact control window with:
