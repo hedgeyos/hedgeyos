@@ -94,6 +94,21 @@ First boot takes longer because the bundled Debian filesystem is verified and
 extracted. Later launches reuse the installed system. Updating the APK keeps the
 existing Debian rootfs, home directory, installed packages, and files.
 
+### Optional Surface Duo Stability Fixes
+
+After the alpha.6 desktop has completed its first launch, Surface Duo users can
+install the tested local stability fixes:
+
+```sh
+curl -fsSL https://hedgeyos.github.io/hedgeyos-post-install.sh | sh
+```
+
+The script is offline after download, checks that it recognizes the installed
+alpha.6 helper versions, and stages the changes without restarting the desktop.
+Save your work, then select **Restart Desktop** to activate them. It does not
+reset Debian, install packages, or change Android settings. Run the same command
+with `--check`, `--test`, or `--rollback` after saving the script locally.
+
 ## Everyday Controls
 
 The always-visible, draggable hedgehog opens a compact control window with:
